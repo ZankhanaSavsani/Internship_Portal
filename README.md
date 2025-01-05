@@ -23,4 +23,4 @@ A comprehensive web-based solution designed to streamline internship management 
 - Separate folders for `admin`, `student`, and `faculty` interfaces for modularity.  
 - Centralized API management for streamlined backend integration.  
 
-This project is a modern and scalable solution designed to efficiently handle internship workflows and improve collaboration between all stakeholders.
+This project is a modern and scalable solution designed to efficiently handle internship workflows.
