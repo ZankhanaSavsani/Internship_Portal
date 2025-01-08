@@ -1,17 +1,15 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const crypto = require('crypto'); // For generating random passwords
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 
 const studentSchema = new mongoose.Schema({
   username: {
     type: String,
     required: true,
-    unique: true,
   },
   email: {
     type: String,
     required: true,
-    unique: true,
   },
   password: {
     type: String,
@@ -19,31 +17,41 @@ const studentSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    default: 'student',
+    default: "student",
+  },
+  semester: {
+    type: Number,
+    enum: [5, 7],
+    required: true,
+  },
+  year: {
+    type: String, // Format: "2025-2026"
+    required: true,
+  },
+  Guide: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Guide", // Reference to the Guide model
   },
 });
 
-// Pre-save hook to generate email and hash password
-studentSchema.pre('save', async function (next) {
-  // Automatically generate email from username
-  if (this.username && !this.email) {
-    this.email = `${this.username}@charusat.edu.in`;
-  }
+// Create a compound index for `username`, `semester`, and `year`
+studentSchema.index({ username: 1, semester: 1, year: 1 }, { unique: true });
 
-  // Auto-generate a password if not provided
-  if (!this.password) {
-    const randomPassword = crypto.randomBytes(8).toString('hex'); // Generate an 8-byte random password
-    this.password = randomPassword;
-  }
+// Pre-save hook for hashing password and setting email
+studentSchema.pre("save", async function (next) {
+  // Automatically generate email from the username
+  this.email = `${this.username}@charusat.edu.in`;
+
+  // Generate a random password 
+  const randomPassword = crypto.randomBytes(8).toString("hex"); // Random 16-character password
+  this.password = randomPassword;
 
   // Hash the password before saving
-  if (this.isModified('password')) {
-    this.password = await bcrypt.hash(this.password, 10);
-  }
+  this.password = await bcrypt.hash(this.password, 10);
 
   next();
 });
 
-const Student = mongoose.model('Student', studentSchema);
+const Student = mongoose.model("Student", studentSchema);
 
 module.exports = Student;
