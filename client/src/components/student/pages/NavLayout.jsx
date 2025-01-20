@@ -1,32 +1,54 @@
-import React, { useState } from 'react';
-import { 
-  Building2, Users, FileText, CheckSquare, ClipboardList, Menu, X,
-  Bell, LogOut, User, ChevronDown
-} from 'lucide-react';
+import React, { useState } from "react";
+import {
+  Building2,
+  Users,
+  FileText,
+  CheckSquare,
+  ClipboardList,
+  Menu,
+  X,
+  Bell,
+  LogOut,
+  User,
+  ChevronDown,
+} from "lucide-react";
 import {
   DropdownMenu,
   RadixDropdownMenuTrigger,
   RadixDropdownMenuContent,
   CustomDropdownMenuItem,
   CustomDropdownMenuSeparator,
-} from '../ui/dropdown-menu';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
+} from "../ui/dropdown-menu";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
 
 const NavLayout = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(3);
 
   const navItems = [
-    { icon: <Building2 size={20} />, text: 'Company Approval', path: '/company' },
-    { icon: <Users size={20} />, text: 'Mentor Selection', path: '/mentor' },
-    { icon: <FileText size={20} />, text: 'Status', path: '/status' },
-    { icon: <CheckSquare size={20} />, text: 'Completion', path: '/completion' },
-    { icon: <ClipboardList size={20} />, text: 'Weekly Reports', path: '/reports' }
+    { icon: <Building2 size={20} />, text: "Dashboard", path: "/Dashboard" },
+    {
+      icon: <Building2 size={20} />,
+      text: "Company Approval",
+      path: "/CompanyApprovalForm",
+    },
+    { icon: <Users size={20} />, text: "Mentor Selection", path: "/mentor" },
+    { icon: <FileText size={20} />, text: "Status", path: "/status" },
+    {
+      icon: <CheckSquare size={20} />,
+      text: "Completion",
+      path: "/completion",
+    },
+    {
+      icon: <ClipboardList size={20} />,
+      text: "Weekly Reports",
+      path: "/reports",
+    },
   ];
 
   const handleLogout = () => {
-    console.log('Logging out...');
+    console.log("Logging out...");
   };
 
   return (
@@ -43,22 +65,31 @@ const NavLayout = ({ children }) => {
               </Badge>
             )}
           </Button>
-          <button onClick={() => setIsOpen(!isOpen)} className="p-2 focus:outline-none">
-            {isOpen ? <X size={24} className="text-gray-700" /> : <Menu size={24} className="text-gray-700" />}
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="p-2 focus:outline-none"
+          >
+            {isOpen ? (
+              <X size={24} className="text-gray-700" />
+            ) : (
+              <Menu size={24} className="text-gray-700" />
+            )}
           </button>
         </div>
       </div>
 
       {/* Sidebar */}
-      <aside className={`
+      <aside
+        className={`
         fixed lg:static 
         w-64 h-full 
         bg-white shadow-lg 
         transition-transform duration-300 ease-in-out
         z-40
         flex flex-col
-        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
+        ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+      `}
+      >
         <div className="hidden lg:flex p-4 border-b bg-gray-100 justify-between items-center">
           <h2 className="text-xl font-bold text-gray-700">Internship Portal</h2>
         </div>
@@ -96,21 +127,26 @@ const NavLayout = ({ children }) => {
           </div>
 
           {/* User Profile Dropdown */}
-          <DropdownMenu trigger={
-            <div className="flex items-center space-x-3">
-              <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                <User size={20} className="text-gray-700" />
+          <DropdownMenu
+            trigger={
+              <div className="flex items-center space-x-3">
+                <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                  <User size={20} className="text-gray-700" />
+                </div>
+                <span className="font-medium text-gray-700">John Doe</span>
+                <ChevronDown size={16} className="text-gray-600" />
               </div>
-              <span className="font-medium text-gray-700">John Doe</span>
-              <ChevronDown size={16} className="text-gray-600" />
-            </div>
-          }>
+            }
+          >
             <CustomDropdownMenuItem className="cursor-pointer hover:bg-gray-100 p-3 rounded-lg">
               <User className="mr-2 h-4 w-4 text-gray-600" />
               <span>Profile</span>
             </CustomDropdownMenuItem>
             <CustomDropdownMenuSeparator />
-            <CustomDropdownMenuItem className="cursor-pointer text-red-600 hover:bg-gray-100 p-3 rounded-lg" onClick={handleLogout}>
+            <CustomDropdownMenuItem
+              className="cursor-pointer text-red-600 hover:bg-gray-100 p-3 rounded-lg"
+              onClick={handleLogout}
+            >
               <LogOut className="mr-2 h-4 w-4" />
               <span>Logout</span>
             </CustomDropdownMenuItem>
@@ -119,10 +155,8 @@ const NavLayout = ({ children }) => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-64 pt-16 lg:pt-0 bg-gray-50">
-        <div className="p-8 overflow-auto min-h-screen">
-          {children}
-        </div>
+      <main className="flex-1 lg:ml-64 pt-16 lg:pt-0 bg-gray-50 h-full">
+        <div className="h-full">{children}</div>
       </main>
     </div>
   );
@@ -130,7 +164,7 @@ const NavLayout = ({ children }) => {
 
 export default NavLayout;
 // import React, { useState } from 'react';
-// import { 
+// import {
 //   Building2, Users, FileText, CheckSquare, ClipboardList, Menu, X,
 //   Bell, LogOut, User, ChevronDown
 // } from 'lucide-react';
@@ -182,9 +216,9 @@ export default NavLayout;
 
 //       {/* Sidebar */}
 //       <div className={`
-//         fixed lg:static 
-//         w-64 h-full 
-//         bg-white shadow-lg 
+//         fixed lg:static
+//         w-64 h-full
+//         bg-white shadow-lg
 //         transition-transform duration-300 ease-in-out
 //         z-40
 //         flex flex-col
