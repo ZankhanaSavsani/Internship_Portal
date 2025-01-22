@@ -39,7 +39,7 @@ const NavLayout = ({ children }) => {
     {
       icon: <CheckSquare size={20} />,
       text: "Completion",
-      path: "/completion",
+      path: "/SummerInternshipCompletionForm",
     },
     {
       icon: <ClipboardList size={20} />,
