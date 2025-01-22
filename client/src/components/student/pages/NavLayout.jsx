@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  LayoutDashboard,
   Building2,
   Users,
   FileText,
@@ -27,7 +28,7 @@ const NavLayout = ({ children }) => {
   const [notificationCount, setNotificationCount] = useState(3);
 
   const navItems = [
-    { icon: <Building2 size={20} />, text: "Dashboard", path: "/Dashboard" },
+    { icon: <LayoutDashboard size={20} />, text: "Dashboard", path: "/Dashboard" },
     {
       icon: <Building2 size={20} />,
       text: "Company Approval",
@@ -43,7 +44,7 @@ const NavLayout = ({ children }) => {
     {
       icon: <ClipboardList size={20} />,
       text: "Weekly Reports",
-      path: "/reports",
+      path: "/AddWeeklyReportPage",
     },
   ];
 
@@ -52,7 +53,7 @@ const NavLayout = ({ children }) => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 w-full bg-white z-50 px-4 py-3 border-b shadow-md flex justify-between items-center">
         <h2 className="text-xl font-bold text-gray-700">Internship Portal</h2>
@@ -82,12 +83,12 @@ const NavLayout = ({ children }) => {
       <aside
         className={`
         fixed lg:static 
-        w-64 h-full 
+        w-64 h-[calc(100vh-4rem)] lg:h-screen
         bg-white shadow-lg 
         transition-transform duration-300 ease-in-out
         z-40
         flex flex-col
-        ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+        ${isOpen ? "translate-x-0 mt-16 lg:mt-0" : "-translate-x-full lg:translate-x-0"}
       `}
       >
         <div className="hidden lg:flex p-4 border-b bg-gray-100 justify-between items-center">
@@ -95,8 +96,8 @@ const NavLayout = ({ children }) => {
         </div>
 
         {/* Navigation Items */}
-        <nav className="p-4 flex-1">
-          <ul className="space-y-2">
+        <nav className="flex-1 overflow-y-auto">
+          <ul className="p-4 space-y-2">
             {navItems.map((item, index) => (
               <li key={index}>
                 <a
@@ -155,8 +156,8 @@ const NavLayout = ({ children }) => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-64 pt-16 lg:pt-0 bg-gray-50 h-full">
-        <div className="h-full">{children}</div>
+      <main className="flex-1 lg:min-h-screen bg-gray-50 mt-16 lg:mt-0">
+        {children}
       </main>
     </div>
   );

@@ -3,6 +3,8 @@ import Dashboard from './components/student/pages/Dashboard';
 import './components/student/css/globals.css';
 import CompanyApprovalForm from './components/student/pages/CompanyApprovalPage';
 import Layout from './components/student/Layout';
+import WeeklyReportForm from './components/student/pages/WeeklyReportForm';
+import AddWeeklyReportPage from './components/student/pages/AddWeeklyReportPage';
 
 // import LoginPage from './pages/LoginPage';
 // import StudentDashboard from './pages/StudentDashboard';
@@ -23,6 +25,8 @@ function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/Dashboard" element={<Dashboard />} />
         <Route path="/CompanyApprovalForm" element={<CompanyApprovalForm />} />
+        <Route path="/WeeklyReportForm" element={<WeeklyReportForm />} />
+        <Route path="/AddWeeklyReportPage" element={<AddWeeklyReportPage />} />
         </Route>
       </Routes>
     </Router>
