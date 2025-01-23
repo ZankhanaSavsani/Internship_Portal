@@ -28,14 +28,13 @@ const NavLayout = ({ children }) => {
   const [notificationCount, setNotificationCount] = useState(3);
 
   const navItems = [
-    { icon: <LayoutDashboard size={20} />, text: "Dashboard", path: "/Dashboard" },
+    // { icon: <LayoutDashboard size={20} />, text: "Dashboard", path: "/Dashboard" },
     {
       icon: <Building2 size={20} />,
       text: "Company Approval",
       path: "/CompanyApprovalForm",
     },
-    { icon: <Users size={20} />, text: "Mentor Selection", path: "/mentor" },
-    { icon: <FileText size={20} />, text: "Status", path: "/status" },
+    { icon: <FileText size={20} />, text: "Status", path: "/SummerInternshipForm" },
     {
       icon: <CheckSquare size={20} />,
       text: "Completion",
@@ -46,6 +45,7 @@ const NavLayout = ({ children }) => {
       text: "Weekly Reports",
       path: "/AddWeeklyReportPage",
     },
+    { icon: <Users size={20} />, text: "Mentor Selection", path: "/mentor" },
   ];
 
   const handleLogout = () => {

@@ -5,7 +5,8 @@ import CompanyApprovalForm from './components/student/pages/CompanyApprovalPage'
 import Layout from './components/student/Layout';
 import WeeklyReportForm from './components/student/pages/WeeklyReportForm';
 import AddWeeklyReportPage from './components/student/pages/AddWeeklyReportPage';
-import SummerInternshipCompletionForm from './components/student/pages/SummerInternshipCompletionStatus';
+import SummerInternshipCompletionForm from './components/student/pages/SummerInternshipCompletionStatusForm';
+import SummerInternshipForm from './components/student/pages/SummerInternshipStatusForm';
 
 // import LoginPage from './pages/LoginPage';
 // import StudentDashboard from './pages/StudentDashboard';
@@ -29,6 +30,7 @@ function App() {
         <Route path="/WeeklyReportForm" element={<WeeklyReportForm />} />
         <Route path="/AddWeeklyReportPage" element={<AddWeeklyReportPage />} />
         <Route path="/SummerInternshipCompletionForm" element={<SummerInternshipCompletionForm />} />
+        <Route path="/SummerInternshipForm" element={<SummerInternshipForm />} />
         </Route>
       </Routes>
     </Router>

@@ -126,7 +126,7 @@ const WeeklyReportForm = () => {
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Student Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Student Name *</label>
             <Input
               placeholder="Enter your full name"
               value={formData.studentName}
@@ -137,7 +137,7 @@ const WeeklyReportForm = () => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Project Title</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Project Title *</label>
             <Input
               placeholder="Enter project title"
               value={formData.projectTitle}
@@ -148,13 +148,13 @@ const WeeklyReportForm = () => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Report Week</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Report Week *</label>
             <Select
               value={formData.reportWeek}
               onValueChange={value => handleChange('reportWeek', value)}
             >
               <SelectTrigger className={errors.reportWeek ? 'border-red-500' : ''}>
-                <SelectValue placeholder="Select Week" />
+                <SelectValue placeholder="Select Week " />
               </SelectTrigger>
               <SelectContent>
                 {[1, 2, 3, 4].map(week => (
@@ -176,7 +176,7 @@ const WeeklyReportForm = () => {
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Report Week Start</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Report Week Start *</label>
             <Input
               type="date"
               value={formData.reportWeekStart}
@@ -187,7 +187,7 @@ const WeeklyReportForm = () => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Report Week End</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Report Week End *</label>
             <Input
               type="date"
               value={formData.reportWeekEnd}
@@ -206,7 +206,7 @@ const WeeklyReportForm = () => {
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Objectives for Week</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Objectives for Week *</label>
             <Textarea
               placeholder="List your key objectives for this week"
               value={formData.objectivesForWeek}
@@ -217,7 +217,7 @@ const WeeklyReportForm = () => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tasks Completed</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tasks Completed *</label>
             <Textarea
               placeholder="Describe the tasks you completed"
               value={formData.tasksCompleted}
@@ -236,7 +236,7 @@ const WeeklyReportForm = () => {
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Key Findings</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Key Findings *</label>
             <Textarea
               placeholder="Share your key findings and insights"
               value={formData.keyFindings}
@@ -247,7 +247,7 @@ const WeeklyReportForm = () => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Challenges Encountered</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Challenges Encountered *</label>
             <Textarea
               placeholder="Describe any challenges or obstacles faced"
               value={formData.challengesEncountered}
@@ -258,7 +258,7 @@ const WeeklyReportForm = () => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Plan for Next Week</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Plan for Next Week *</label>
             <Textarea
               placeholder="Outline your plans and goals for next week"
               value={formData.planForNextWeek}
@@ -275,7 +275,7 @@ const WeeklyReportForm = () => {
   return (
     <Card className="w-full max-w-4xl mx-auto bg-gray-50">
       <CardHeader className="border-b bg-white">
-        <CardTitle className="text-2xl font-bold text-gray-800">Weekly Progress Report</CardTitle>
+        <CardTitle className="text-2xl font-bold text-gray-800">Weekly Progress Report *</CardTitle>
       </CardHeader>
       
       <CardContent className="pt-6">

@@ -20,54 +20,34 @@ import {
   ChevronLeft,
   ChevronRight,
   Save,
+  Minus,
   Briefcase,
   FileText,
   MapPin,
   Upload,
 } from "lucide-react";
 
-const SummerInternshipCompletionForm = () => {
+const SummerInternshipForm = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     companyName: "",
-    typeOfInternship: "",
-    technology: "",
-    technologyDetails: "",
+    companyWebsite: "",
+    stipendAmount: "",
     modeOfInternship: "",
-    internshipLocation: "",
+    typeOfInternship: "",
+    technologies: [""],
+    technologiesDetails: "",
+    companyCity: "",
     companyAddress: "",
     hrDetails: {
       name: "",
       contactNo: "",
       email: "",
     },
-    startDate: "",
-    endDate: "",
-    stipendAmount: "",
-    stipendProof: null,
-    completionCertificate: null,
+    offerLetter: null,
   });
 
   const [errors, setErrors] = useState({});
-
-  const validateURL = (url) => {
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const validatePhone = (phone) => {
-    const phoneRegex = /^\+?[\d\s-]{10,}$/;
-    return phoneRegex.test(phone);
-  };
 
   const steps = [
     {
@@ -92,11 +72,31 @@ const SummerInternshipCompletionForm = () => {
     },
   ];
 
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePhone = (phone) => {
+    const phoneRegex = /^\+?[\d\s-]{10,}$/;
+    return phoneRegex.test(phone);
+  };
+
+  const validateURL = (url) => {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const handleChange = (field, value) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
+
     if (errors[field]) {
       setErrors((prev) => ({
         ...prev,
@@ -113,6 +113,7 @@ const SummerInternshipCompletionForm = () => {
         [field]: value,
       },
     }));
+
     if (errors[`hrDetails.${field}`]) {
       setErrors((prev) => ({
         ...prev,
@@ -121,18 +122,10 @@ const SummerInternshipCompletionForm = () => {
     }
   };
 
-  const handleFileChange = (field) => (event) => {
-    const file = event.target.files[0];
-    setFormData((prev) => ({
-      ...prev,
-      [field]: file
-    }));
-    if (errors[field]) {
-      setErrors((prev) => ({
-        ...prev,
-        [field]: undefined,
-      }));
-    }
+  const handleTechnologyChange = (index, value) => {
+    const newTechnology = [...formData.technologies];
+    newTechnology[index] = value;
+    handleChange("technologies", newTechnology);
   };
 
   const validateStep = (step) => {
@@ -143,38 +136,48 @@ const SummerInternshipCompletionForm = () => {
         if (!formData.companyName.trim()) {
           newErrors.companyName = "Company name is required";
         }
-        if (!formData.typeOfInternship) {
-          newErrors.typeOfInternship = "Type of internship is required";
-        }
-        if (!formData.technology.trim()) {
-          newErrors.technology = "Technology is required";
-        }
-        if (!formData.technologyDetails.trim()) {
-          newErrors.technologyDetails = "Technology details are required";
+        if (!formData.companyWebsite || !validateURL(formData.companyWebsite)) {
+          newErrors.companyWebsite = "Valid company website URL is required";
         }
         break;
 
       case 2:
-        if (!formData.startDate) {
-          newErrors.startDate = "Start date is required";
-        }
-        if (!formData.endDate) {
-          newErrors.endDate = "End date is required";
-        }
-        if (formData.startDate && formData.endDate && new Date(formData.startDate) > new Date(formData.endDate)) {
-          newErrors.endDate = "End date must be after start date";
-        }
-        if (!formData.stipendAmount || formData.stipendAmount < 0) {
+        if (!formData.stipendAmount || parseFloat(formData.stipendAmount) < 0) {
           newErrors.stipendAmount = "Valid stipend amount is required";
+        }
+        const validmodeOfInternships = [
+          "Offline", "Online", "Hybrid",
+        ];
+        if (
+          !formData.modeOfInternship ||
+          !validmodeOfInternships.includes(formData.modeOfInternship)
+        ) {
+          newErrors.modeOfInternship = "Please select a valid internship mode";
+        }
+        const validtypeOfInternship = [
+          "Development Project",
+          "Inhouse/Research Project",
+          "On technologies Training",
+        ];
+        if (
+          !formData.typeOfInternship ||
+          !validtypeOfInternship.includes(formData.typeOfInternship)
+        ) {
+          newErrors.typeOfInternship = "Please select a valid type Of Internship";
+        }
+        if (!formData.technologies[0]) {
+          newErrors.technologies = "At least one technology is required";
+        } else if (formData.technologies.some((tech) => !tech.trim())) {
+          newErrors.technologies = "All technology fields must be filled";
+        }
+        if (!formData.technologiesDetails.trim()) {
+          newErrors.technologiesDetails = "technologies Details is required";
         }
         break;
 
       case 3:
-        if (!formData.modeOfInternship) {
-          newErrors.modeOfInternship = "Mode of internship is required";
-        }
-        if (!formData.internshipLocation.trim()) {
-          newErrors.internshipLocation = "Internship location is required";
+        if (!formData.companyCity.trim()) {
+          newErrors.companyCity = "Company city is required";
         }
         if (!formData.companyAddress.trim()) {
           newErrors.companyAddress = "Company address is required";
@@ -183,16 +186,16 @@ const SummerInternshipCompletionForm = () => {
           newErrors["hrDetails.name"] = "HR name is required";
         }
         if (!validatePhone(formData.hrDetails.contactNo)) {
-          newErrors["hrDetails.contactNo"] = "Valid phone number is required";
+          newErrors["hrDetails.contactNo"] = "Invalid contact number";
         }
         if (!validateEmail(formData.hrDetails.email)) {
-          newErrors["hrDetails.email"] = "Valid email is required";
+          newErrors["hrDetails.email"] = "Invalid email address";
         }
         break;
 
       case 4:
-        if (!formData.completionCertificate) {
-          newErrors.completionCertificate = "Completion certificate is required";
+        if (!formData.offerLetter) {
+          newErrors.offerLetter = "Offer letter is required";
         }
         break;
     }
@@ -211,10 +214,39 @@ const SummerInternshipCompletionForm = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
   };
 
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    setFormData((prev) => ({
+      ...prev,
+      offerLetter: file,
+    }));
+
+    if (errors.offerLetter) {
+      setErrors((prev) => ({
+        ...prev,
+        offerLetter: undefined,
+      }));
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (validateStep(currentStep)) {
+    if (validateStep(4)) {
       console.log("Form submitted:", formData);
+      // Here you would typically send the data to your backend
+      const submissionData = new FormData();
+      Object.keys(formData).forEach((key) => {
+        if (key === "hrDetails") {
+          Object.keys(formData.hrDetails).forEach((hrKey) => {
+            submissionData.append(
+              `hrDetails.${hrKey}`,
+              formData.hrDetails[hrKey]
+            );
+          });
+        } else {
+          submissionData.append(key, formData[key]);
+        }
+      });
     }
   };
 
@@ -228,7 +260,7 @@ const SummerInternshipCompletionForm = () => {
                 className={`w-10 h-10 rounded-full border-2 flex items-center justify-center mb-2
                   ${
                     currentStep === step.number
-                      ? "bg-blue-600 border-blue-600 text-white"
+                      ? "bg-blue-900 border-blue-900 text-white"
                       : currentStep > step.number
                       ? "bg-green-500 border-green-500 text-white"
                       : "border-gray-300 text-gray-500"
@@ -259,7 +291,7 @@ const SummerInternshipCompletionForm = () => {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Company Name
+              Company Name *
             </label>
             <Input
               value={formData.companyName}
@@ -274,53 +306,18 @@ const SummerInternshipCompletionForm = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Type of Internship
-            </label>
-            <Select
-              value={formData.typeOfInternship}
-              onValueChange={(value) => handleChange("typeOfInternship", value)}
-            >
-              <SelectTrigger className={errors.typeOfInternship ? "border-red-500" : ""}>
-                <SelectValue placeholder="Select internship type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Development Project">Development Project</SelectItem>
-                <SelectItem value="Research Project">Research Project</SelectItem>
-                <SelectItem value="On Technology Training">On Technology Training</SelectItem>
-              </SelectContent>
-            </Select>
-            {errors.typeOfInternship && (
-              <p className="text-red-500 text-sm mt-1">{errors.typeOfInternship}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Technology
+              Company Website *
             </label>
             <Input
-              value={formData.technology}
-              onChange={(e) => handleChange("technology", e.target.value)}
-              className={errors.technology ? "border-red-500" : ""}
-              placeholder="Enter primary technology used"
+              value={formData.companyWebsite}
+              onChange={(e) => handleChange("companyWebsite", e.target.value)}
+              className={errors.companyWebsite ? "border-red-500" : ""}
+              placeholder="Enter company website"
             />
-            {errors.technology && (
-              <p className="text-red-500 text-sm mt-1">{errors.technology}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Technology Details
-            </label>
-            <Textarea
-              value={formData.technologyDetails}
-              onChange={(e) => handleChange("technologyDetails", e.target.value)}
-              className={errors.technologyDetails ? "border-red-500" : ""}
-              placeholder="Describe the technology stack and tools used"
-            />
-            {errors.technologyDetails && (
-              <p className="text-red-500 text-sm mt-1">{errors.technologyDetails}</p>
+            {errors.companyWebsite && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.companyWebsite}
+              </p>
             )}
           </div>
         </div>
@@ -332,41 +329,9 @@ const SummerInternshipCompletionForm = () => {
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Start Date
-              </label>
-              <Input
-                type="date"
-                value={formData.startDate}
-                onChange={(e) => handleChange("startDate", e.target.value)}
-                className={errors.startDate ? "border-red-500" : ""}
-              />
-              {errors.startDate && (
-                <p className="text-red-500 text-sm mt-1">{errors.startDate}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                End Date
-              </label>
-              <Input
-                type="date"
-                value={formData.endDate}
-                onChange={(e) => handleChange("endDate", e.target.value)}
-                className={errors.endDate ? "border-red-500" : ""}
-              />
-              {errors.endDate && (
-                <p className="text-red-500 text-sm mt-1">{errors.endDate}</p>
-              )}
-            </div>
-          </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Stipend Amount
+              Stipend Amount *
             </label>
             <Input
               type="number"
@@ -377,7 +342,127 @@ const SummerInternshipCompletionForm = () => {
               min="0"
             />
             {errors.stipendAmount && (
-              <p className="text-red-500 text-sm mt-1">{errors.stipendAmount}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {errors.stipendAmount}
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Learning Mode *
+            </label>
+            <Select
+              value={formData.modeOfInternship}
+              onValueChange={(value) => handleChange("modeOfInternship", value)}
+            >
+              <SelectTrigger
+                className={errors.modeOfInternship ? "border-red-500" : ""}
+              >
+                <SelectValue placeholder="Select learning mode" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border-gray-700">
+                <SelectItem value="Offline" className="text-gray-200 hover:bg-gray-700 focus:bg-gray-700 focus:text-white">Offline</SelectItem>
+                <SelectItem value="Online" className="text-gray-200 hover:bg-gray-700 focus:bg-gray-700 focus:text-white">Online</SelectItem>
+                <SelectItem value="Hybrid" className="text-gray-200 hover:bg-gray-700 focus:bg-gray-700 focus:text-white">Hybrid</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.modeOfInternship && (
+              <p className="text-red-500 text-sm mt-1">{errors.modeOfInternship}</p>
+            )}
+          </div>
+  
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Type Of Internship *
+            </label>
+            <Select
+              value={formData.typeOfInternship}
+              onValueChange={(value) => handleChange("typeOfInternship", value)}
+            >
+              <SelectTrigger
+                className={errors.typeOfInternship ? "border-red-500" : ""}
+              >
+                <SelectValue placeholder="Select type Of Internship" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border-gray-700">
+                <SelectItem value="Development Project" className="text-gray-200 hover:bg-gray-700 focus:bg-gray-700 focus:text-white">
+                  Development Project
+                </SelectItem>
+                <SelectItem value="Inhouse/Research Project" className="text-gray-200 hover:bg-gray-700 focus:bg-gray-700 focus:text-white">
+                  Inhouse/Research Project
+                </SelectItem>
+                <SelectItem value="On technologies Training" className="text-gray-200 hover:bg-gray-700 focus:bg-gray-700 focus:text-white">
+                  On technologies Training
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.typeOfInternship && (
+              <p className="text-red-500 text-sm mt-1">{errors.typeOfInternship}</p>
+            )}
+          </div>
+  
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Confirmed Technologies *
+            </label>
+            {formData.technologies.map((tech, index) => (
+              <div key={index} className="flex items-center gap-2 mb-2">
+                <Input
+                  placeholder="Technology"
+                  value={tech}
+                  onChange={(e) => handleTechnologyChange(index, e.target.value)}
+                  className={errors.technologies ? "border-red-500" : ""}
+                />
+                {formData.technologies.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    // size="icon"
+                    onClick={() =>
+                      handleChange(
+                        "technologies",
+                        formData.technologies.filter((_, i) => i !== index)
+                      )
+                    }
+                  >
+                   <Minus size={16} />
+                  </Button>
+                )}
+              </div>
+            ))}
+            <Button
+              type="button"
+              // variant="outline"
+              onClick={() => 
+                handleChange("technologies", [...formData.technologies, ""])
+              }
+              className="w-full"
+            >
+              Add Technology
+            </Button>
+            {errors.technologies && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.technologies}
+              </p>
+            )}
+          </div>
+  
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Technologies Details
+            </label>
+            <Textarea
+              value={formData.technologiesDetails}
+              onChange={(e) =>
+                handleChange("technologiesDetails", e.target.value)
+              }
+              placeholder="Provide additional details about the technologies"
+              className={`min-h-[100px] ${errors.technologiesDetails ? 'border-red-500' : ''}`}
+            />
+            {errors.technologiesDetails && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.technologiesDetails}
+              </p>
             )}
           </div>
         </div>
@@ -391,44 +476,22 @@ const SummerInternshipCompletionForm = () => {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Mode of Internship
-            </label>
-            <Select
-              value={formData.modeOfInternship}
-              onValueChange={(value) => handleChange("modeOfInternship", value)}
-            >
-              <SelectTrigger className={errors.modeOfInternship ? "border-red-500" : ""}>
-                <SelectValue placeholder="Select mode of internship" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Offline">Offline</SelectItem>
-                <SelectItem value="Online">Online</SelectItem>
-                <SelectItem value="Hybrid">Hybrid</SelectItem>
-              </SelectContent>
-            </Select>
-            {errors.modeOfInternship && (
-              <p className="text-red-500 text-sm mt-1">{errors.modeOfInternship}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Internship Location 
+              Company City *
             </label>
             <Input
-              value={formData.internshipLocation}
-              onChange={(e) => handleChange("internshipLocation", e.target.value)}
-              className={errors.internshipLocation ? "border-red-500" : ""}
-              placeholder="Enter internship location"
+              value={formData.companyCity}
+              onChange={(e) => handleChange("companyCity", e.target.value)}
+              className={errors.companyCity ? "border-red-500" : ""}
+              placeholder="Enter company city"
             />
-            {errors.internshipLocation && (
-              <p className="text-red-500 text-sm mt-1">{errors.internshipLocation}</p>
+            {errors.companyCity && (
+              <p className="text-red-500 text-sm mt-1">{errors.companyCity}</p>
             )}
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Company Address 
+              Company Address *
             </label>
             <Textarea
               value={formData.companyAddress}
@@ -437,7 +500,9 @@ const SummerInternshipCompletionForm = () => {
               placeholder="Enter complete company address"
             />
             {errors.companyAddress && (
-              <p className="text-red-500 text-sm mt-1">{errors.companyAddress}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {errors.companyAddress}
+              </p>
             )}
           </div>
 
@@ -452,7 +517,9 @@ const SummerInternshipCompletionForm = () => {
               className={errors["hrDetails.name"] ? "border-red-500" : ""}
             />
             {errors["hrDetails.name"] && (
-              <p className="text-red-500 text-sm mt-1">{errors["hrDetails.name"]}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {errors["hrDetails.name"]}
+              </p>
             )}
 
             <Input
@@ -462,7 +529,9 @@ const SummerInternshipCompletionForm = () => {
               className={errors["hrDetails.contactNo"] ? "border-red-500" : ""}
             />
             {errors["hrDetails.contactNo"] && (
-              <p className="text-red-500 text-sm mt-1">{errors["hrDetails.contactNo"]}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {errors["hrDetails.contactNo"]}
+              </p>
             )}
 
             <Input
@@ -473,7 +542,9 @@ const SummerInternshipCompletionForm = () => {
               className={errors["hrDetails.email"] ? "border-red-500" : ""}
             />
             {errors["hrDetails.email"] && (
-              <p className="text-red-500 text-sm mt-1">{errors["hrDetails.email"]}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {errors["hrDetails.email"]}
+              </p>
             )}
           </div>
         </div>
@@ -487,38 +558,20 @@ const SummerInternshipCompletionForm = () => {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Stipend Proof
+              Offer Letter *
             </label>
             <Input
               type="file"
-              onChange={(e) => handleFileChange("stipendProof")}
-              className={errors.stipendProof ? "border-red-500" : ""}
+              onChange={handleFileChange}
               accept=".pdf,.jpg,.jpeg,.png"
+              className={errors.offerLetter ? "border-red-500" : ""}
             />
-            <p className="text-gray-500 text-xs mt-1">
-              Upload proof of stipend (optional)
-            </p>
-            {errors.stipendProof && (
-              <p className="text-red-500 text-sm mt-1">{errors.stipendProof}</p>
+            {errors.offerLetter && (
+              <p className="text-red-500 text-sm mt-1">{errors.offerLetter}</p>
             )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Completion Certificate
-            </label>
-            <Input
-              type="file"
-              onChange={(e) => handleFileChange("completionCertificate")}
-              className={errors.completionCertificate ? "border-red-500" : ""}
-              accept=".pdf,.jpg,.jpeg,.png"
-            />
-            <p className="text-gray-500 text-xs mt-1">
-              Upload internship completion certificate
+            <p className="text-xs text-gray-500 mt-1">
+              Accepted formats: PDF, JPG, PNG (Max 5MB)
             </p>
-            {errors.completionCertificate && (
-              <p className="text-red-500 text-sm mt-1">{errors.completionCertificate}</p>
-            )}
           </div>
         </div>
       </div>
@@ -529,7 +582,7 @@ const SummerInternshipCompletionForm = () => {
     <Card className="w-full max-w-4xl mx-auto bg-gray-50">
       <CardHeader className="border-b bg-white">
         <CardTitle className="text-2xl font-bold text-gray-800">
-          Summer Internship Completion Form
+        Summer Internship Form
         </CardTitle>
       </CardHeader>
 
@@ -570,7 +623,7 @@ const SummerInternshipCompletionForm = () => {
             onClick={handleSubmit}
             className="bg-green-600 hover:bg-green-700 text-white"
           >
-            Submit Form
+            Submit Application
             <Save className="w-4 h-4 ml-2" />
           </Button>
         )}
@@ -579,4 +632,4 @@ const SummerInternshipCompletionForm = () => {
   );
 };
 
-export default SummerInternshipCompletionForm;
+export default SummerInternshipForm;

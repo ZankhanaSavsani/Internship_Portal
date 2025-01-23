@@ -7,24 +7,35 @@ const summerInternshipCompletionStatusSchema = new mongoose.Schema(
       ref: "Student", // Reference to the Student model
       required: true,
     },
+
+    // Company Details
     companyName: {
       type: String,
       required: true,
     },
+    companyWebsite: {
+      type: String,
+    },
+    companyAddress: {
+      type: String,
+      required: true,
+    },
+
+    // Internship Details
     typeOfInternship: {
       type: String,
       enum: [
         "Development Project",
-        "Research Project",
+        "Inhouse/Research Project",
         "On Technology Training",
       ], // Allowed options
       required: true,
     },
-    technology: {
-      type: String,
+    technologies: {
+      type: [String], // Array of technologies
       required: true,
     },
-    technologyDetails: {
+    technologiesDetails: {
       type: String,
       required: true,
     },
@@ -33,19 +44,8 @@ const summerInternshipCompletionStatusSchema = new mongoose.Schema(
       enum: ["Offline", "Online", "Hybrid"], // Allowed options
       required: true,
     },
-    internshipLocation: {
-      type: String,
-      required: true,
-    },
-    companyAddress: {
-      type: String,
-      required: true,
-    },
-    hrDetails: {
-      name: { type: String, required: true },
-      contactNo: { type: String, required: true },
-      email: { type: String, required: true },
-    },
+
+    // Internship Duration
     startDate: {
       type: Date,
       required: true,
@@ -54,6 +54,15 @@ const summerInternshipCompletionStatusSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
+
+    // HR Contact Details
+    hrDetails: {
+      name: { type: String, required: true },
+      contactNo: { type: String, required: true },
+      email: { type: String, required: true },
+    },
+
+    // Financial & Completion Documents
     stipendAmount: {
       type: Number,
       required: true,

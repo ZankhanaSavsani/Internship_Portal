@@ -242,7 +242,7 @@ const CompanyApprovalForm = () => {
                 className={`w-10 h-10 rounded-full border-2 flex items-center justify-center mb-2
                   ${
                     currentStep === step.number
-                      ? "bg-blue-600 border-blue-600 text-white"
+                      ? "bg-blue-900 border-blue-900 text-white"
                       : currentStep > step.number
                       ? "bg-green-500 border-green-500 text-white"
                       : "border-gray-300 text-gray-500"
@@ -279,7 +279,7 @@ const CompanyApprovalForm = () => {
               value={formData.studentName}
               onChange={(e) => handleChange("studentName", e.target.value)}
               className={errors.studentName ? "border-red-500" : ""}
-              placeholder="Enter your full name (min. 2 characters)"
+              placeholder="Enter your full name"
             />
             {errors.studentName && (
               <p className="text-red-500 text-sm mt-1">{errors.studentName}</p>
@@ -310,7 +310,7 @@ const CompanyApprovalForm = () => {
               value={formData.companyWebsite}
               onChange={(e) => handleChange("companyWebsite", e.target.value)}
               className={errors.companyWebsite ? "border-red-500" : ""}
-              placeholder="Enter company website (e.g., https://example.com)"
+              placeholder="Enter company website"
             />
             {errors.companyWebsite && (
               <p className="text-red-500 text-sm mt-1">
@@ -327,7 +327,7 @@ const CompanyApprovalForm = () => {
               value={formData.companyAddress}
               onChange={(e) => handleChange("companyAddress", e.target.value)}
               className={errors.companyAddress ? "border-red-500" : ""}
-              placeholder="Enter complete company address (min. 10 characters)"
+              placeholder="Enter complete company address"
             />
             {errors.companyAddress && (
               <p className="text-red-500 text-sm mt-1">
@@ -461,7 +461,7 @@ const CompanyApprovalForm = () => {
             )}
 
             <Input
-              placeholder="HR Phone * (min. 10 digits)"
+              placeholder="HR Phone *"
               type="tel"
               value={formData.hrPhone}
               onChange={(e) => handleChange("hrPhone", e.target.value)}
@@ -543,7 +543,7 @@ const CompanyApprovalForm = () => {
               value={formData.currentProject}
               onChange={(e) => handleChange("currentProject", e.target.value)}
               className={errors.currentProject ? "border-red-500" : ""}
-              placeholder="Enter current project (min. 5 characters)"
+              placeholder="Enter current project"
             />
             {errors.currentProject && (
               <p className="text-red-500 text-sm mt-1">
