@@ -273,6 +273,7 @@ const WeeklyReportForm = () => {
   );
 
   return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
     <Card className="w-full max-w-4xl mx-auto bg-gray-50">
       <CardHeader className="border-b bg-white">
         <CardTitle className="text-2xl font-bold text-gray-800">Weekly Progress Report *</CardTitle>
@@ -318,6 +319,7 @@ const WeeklyReportForm = () => {
         )}
       </CardFooter>
     </Card>
+    </div>
   );
 };
 

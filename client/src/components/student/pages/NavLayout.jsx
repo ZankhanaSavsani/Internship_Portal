@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Building2,
@@ -26,6 +27,7 @@ import { Badge } from "../ui/badge";
 const NavLayout = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(3);
+  const navigate = useNavigate();
 
   const navItems = [
     // { icon: <LayoutDashboard size={20} />, text: "Dashboard", path: "/Dashboard" },
@@ -50,6 +52,10 @@ const NavLayout = ({ children }) => {
 
   const handleLogout = () => {
     console.log("Logging out...");
+  };
+
+  const handleStudentProfile = () => {
+    navigate("/StudentProfile");
   };
 
   return (
@@ -139,7 +145,7 @@ const NavLayout = ({ children }) => {
               </div>
             }
           >
-            <CustomDropdownMenuItem className="cursor-pointer hover:bg-gray-100 p-3 rounded-lg">
+            <CustomDropdownMenuItem className="cursor-pointer hover:bg-gray-100 p-3 rounded-lg" onClick={handleStudentProfile}>
               <User className="mr-2 h-4 w-4 text-gray-600" />
               <span>Profile</span>
             </CustomDropdownMenuItem>
