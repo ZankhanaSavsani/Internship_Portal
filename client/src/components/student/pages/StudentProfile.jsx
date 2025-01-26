@@ -12,11 +12,11 @@ import { Lock, User, Mail, GraduationCap, CalendarDays } from "lucide-react";
 
 const StudentProfile = () => {
   const [userData] = useState({
-    username: "john_doe",
-    email: "john.doe@university.edu",
+    username: "Zankhana",
+    email: "22cs078@charusat.edu.in",
     semester: 6,
     year: 3,
-    guide: "Dr. Jane Smith",
+    guide: "Dr. Amit Thakkar",
   });
 
   const [passwordData, setPasswordData] = useState({
