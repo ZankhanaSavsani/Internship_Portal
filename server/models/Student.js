@@ -39,6 +39,10 @@ studentSchema.index({ username: 1, semester: 1, year: 1 }, { unique: true });
 
 // Pre-save hook for hashing password and setting email
 studentSchema.pre("save", async function (next) {
+
+  // Convert username to lowercase
+  this.username = this.username.toLowerCase();
+  
   // Automatically generate email from the username
   this.email = `${this.username}@charusat.edu.in`;
 
@@ -48,6 +52,10 @@ studentSchema.pre("save", async function (next) {
 
   // Hash the password before saving
   this.password = await bcrypt.hash(this.password, 10);
+
+   // Auto-generate academic year
+   const currentYear = new Date().getFullYear();
+   this.year = `${currentYear}-${currentYear + 1}`;
 
   next();
 });

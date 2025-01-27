@@ -58,6 +58,15 @@ const companyApprovalDetailsSchema = new mongoose.Schema(
     reasonToChoose: {
       type: String, // Why the student chose this company
     },
+    approvalStatus: {
+      type: String,
+      enum: ["Pending", "Approved", "Rejected"],
+      default: "Pending", // Default value
+    },
+    rejectionReason: {
+      type: String, // Reason for rejection
+      default: null, // Null by default, only used when rejected
+    },
   },
   { timestamps: true }
 );
