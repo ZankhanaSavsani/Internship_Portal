@@ -3,9 +3,13 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 
 const studentSchema = new mongoose.Schema({
-  username: {
+  studentId: {
     type: String,
     required: true,
+  },
+  studentName: {
+    type: String,
+    default: null,
   },
   email: {
     type: String,
@@ -35,16 +39,16 @@ const studentSchema = new mongoose.Schema({
 });
 
 // Create a compound index for `username`, `semester`, and `year`
-studentSchema.index({ username: 1, semester: 1, year: 1 }, { unique: true });
+studentSchema.index({ studentId: 1, semester: 1, year: 1 }, { unique: true });
 
 // Pre-save hook for hashing password and setting email
 studentSchema.pre("save", async function (next) {
 
   // Convert username to lowercase
-  this.username = this.username.toLowerCase();
+  this.studentId = this.studentId.toLowerCase();
   
   // Automatically generate email from the username
-  this.email = `${this.username}@charusat.edu.in`;
+  this.email = `${this.studentId}@charusat.edu.in`;
 
   // Generate a random password 
   const randomPassword = crypto.randomBytes(8).toString("hex"); // Random 16-character password

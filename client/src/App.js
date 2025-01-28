@@ -25,7 +25,7 @@ function App() {
         <Route path="/guide" element={<GuideDashboard />} /> */}
         
         {/* Corrected Route Syntax */}
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/" element={<StudentProfile />} />
         <Route path="/Dashboard" element={<Dashboard />} />
         <Route path="/CompanyApprovalForm" element={<CompanyApprovalForm />} />
         <Route path="/WeeklyReportForm" element={<WeeklyReportForm />} />

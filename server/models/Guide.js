@@ -8,6 +8,10 @@ const guideSchema = new mongoose.Schema({
     required: true, 
     unique: true,
   },
+  guideName: {
+    type: String,
+    default: null,
+  },
   email: {
     type: String,
     required: true
