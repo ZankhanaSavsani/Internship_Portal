@@ -2,48 +2,139 @@ const mongoose = require("mongoose");
 
 const notificationSchema = new mongoose.Schema(
   {
-    recipient: {
-      type: mongoose.Schema.Types.ObjectId,
-      refPath: "recipientType",
-      required: true, // Can be Student, Guide, or Admin
-    },
-    recipientType: {
-      type: String,
-      enum: ["Student", "Guide", "Admin"],
-      required: true,
-    },
+    // Sender details
     sender: {
-      type: mongoose.Schema.Types.ObjectId,
-      refPath: "senderType",
-      required: true,
+      id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        refPath: "sender.model", // Reference to Admin, Guide, or Student model
+      },
+      model: {
+        type: String,
+        required: true,
+        enum: ["admin", "guide", "student"],
+      },
+      name: String,
     },
-    senderType: {
+
+    // Recipients of the notification
+    recipients: [
+      {
+        id: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: true,
+          refPath: "recipients.model", // Reference to Admin, Guide, or Student model
+        },
+        model: {
+          type: String,
+          required: true,
+          enum: ["admin", "guide", "student"], 
+        },
+        isRead: {
+          type: Boolean,
+          default: false, // Track whether the recipient has read the notification
+        },
+        readAt: {
+          type: Date,
+          default: null, // Store the timestamp when the notification was read
+        },
+      },
+    ],
+
+    // Notification content
+    title: {
       type: String,
-      enum: ["Admin", "Guide"],
       required: true,
     },
     message: {
       type: String,
       required: true,
     },
-    relatedEntity: {
-      type: mongoose.Schema.Types.ObjectId,
-      refPath: "entityType", // Links to WeeklyReport, CompanyApprovalDetails, etc.
-      default: null,
-    },
-    entityType: {
+
+    // Type of notification
+    type: {
       type: String,
-      enum: ["WeeklyReport", "CompanyApprovalDetails", "Other"],
-      default: "Other",
+      required: true,
+      enum: [
+        "COMPANY_APPROVAL_SUBMISSION",
+        "COMPANY_APPROVAL_STATUS_CHANGE",
+        "WEEKLY_REPORT_SUBMISSION",
+        "WEEKLY_REPORT_STATUS_CHANGE",
+        "INTERNSHIP_COMPLETION_SUBMISSION",
+        "INTERNSHIP_STATUS_SUBMISSION",
+        "BROADCAST_MESSAGE",
+      ],
     },
-    status: {
+
+    // Filters for targeted notifications (used for broadcasting messages to specific year/semester students)
+    targetFilters: {
+      year: String, // Target year
+      semester: Number, // Target semester
+    },
+
+    // to share relevant link
+    link: {
       type: String,
-      enum: ["unread", "read"],
-      default: "unread",
+      default: null, // Can store a URL or document link
+      validate: {
+        validator: function (v) {
+          return !v || /^https?:\/\/[\w\-]+(\.[\w\-]+)+[/#?]?.*$/.test(v);
+        },
+        message: "Invalid URL format",
+      },
     },
   },
-  { timestamps: true }
+  { timestamps: true } // Automatically adds createdAt and updatedAt timestamps
 );
+
+// Indexes for better query performance
+notificationSchema.index({ "sender.id": 1, createdAt: -1 }); // Index for retrieving sender-based notifications
+notificationSchema.index({ "recipients.id": 1, "recipients.isRead": 1, createdAt: -1 }); // Index for fetching unread notifications efficiently
+notificationSchema.index({ type: 1, createdAt: -1 }); // Index for filtering notifications by type
+notificationSchema.index({ "targetFilters.year": 1, "targetFilters.semester": 1 }); // Index for filtering broadcast messages
+
+// Static method to create a new notification
+notificationSchema.statics.createNotification = async function ({
+  sender,
+  recipients,
+  title,
+  message,
+  type,
+  targetFilters = null,
+  link = null,
+}) {
+  const notification = new this({
+    sender,
+    recipients: recipients.map((recipient) => ({
+      id: recipient._id,
+      model: recipient.constructor.modelName,
+    })),
+    title,
+    message,
+    type,
+    targetFilters,
+    link,
+  });
+  return await notification.save();
+};
+
+// Optimized method to mark notifications as read for a user
+notificationSchema.statics.markAllAsReadForUser = async function (userId) {
+  return await this.updateMany(
+    { "recipients.id": userId, "recipients.isRead": false },
+    { $set: { "recipients.$.isRead": true, "recipients.$.readAt": new Date() } }
+  );
+};
+
+// Method to mark a single notification as read for a recipient
+notificationSchema.methods.markAsRead = async function (recipientId) {
+  const recipient = this.recipients.find((r) => r.id.equals(recipientId));
+  if (recipient && !recipient.isRead) {
+    recipient.isRead = true;
+    recipient.readAt = new Date(); // Store the timestamp when marked as read
+    await this.save();
+  }
+};
 
 const Notification = mongoose.model("Notification", notificationSchema);
 
