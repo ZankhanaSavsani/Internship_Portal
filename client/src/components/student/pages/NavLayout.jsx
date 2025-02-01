@@ -20,9 +20,9 @@ import {
   RadixDropdownMenuContent,
   CustomDropdownMenuItem,
   CustomDropdownMenuSeparator,
-} from "../ui/dropdown-menu";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
+} from "../../ui/dropdown-menu";
+import { Button } from "../../ui/button";
+import { Badge } from "../../ui/badge";
 
 const NavLayout = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);

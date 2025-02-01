@@ -8,6 +8,7 @@ import AddWeeklyReportPage from './components/student/pages/AddWeeklyReportPage'
 import SummerInternshipCompletionForm from './components/student/pages/SummerInternshipCompletionStatusForm';
 import SummerInternshipForm from './components/student/pages/SummerInternshipStatusForm';
 import StudentProfile from './components/student/pages/StudentProfile';
+import LoginPage from './components/pages/LoginPage';
 
 // import LoginPage from './pages/LoginPage';
 // import StudentDashboard from './pages/StudentDashboard';
@@ -33,6 +34,7 @@ function App() {
         <Route path="/SummerInternshipCompletionForm" element={<SummerInternshipCompletionForm />} />
         <Route path="/SummerInternshipForm" element={<SummerInternshipForm />} />
         <Route path="/StudentProfile" element={<StudentProfile />} />
+        <Route path="/login" element={<LoginPage />} />
         </Route>
       </Routes>
     </Router>

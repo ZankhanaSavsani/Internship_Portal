@@ -4,11 +4,11 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from "../ui/card";
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
+} from "../../ui/card";
+import { Input } from "../../ui/input";
+import { Button } from "../../ui/button";
 import { Lock, User, Mail, GraduationCap, CalendarDays, IdCard, CheckCircle, Loader2 } from "lucide-react";
-import { Alert, AlertDescription } from "../ui/alert";
+import { Alert, AlertDescription } from "../../ui/alert";
 
 const StudentProfile = () => {
   const [userData, setUserData] = useState({

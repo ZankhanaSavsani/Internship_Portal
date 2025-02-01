@@ -1,121 +1,92 @@
 import React, { useState } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { User, Lock } from 'lucide-react';
 
 const LoginPage = () => {
+  const [userType, setUserType] = useState('student');
   const [formData, setFormData] = useState({
     username: '',
-    password: '',
+    password: ''
   });
 
-  const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const navigate = useNavigate();
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
-    setError(null);
-    setSuccessMessage('');
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Handle login logic here
+    console.log('Login attempted:', { userType, ...formData });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const response = await axios.post('http://localhost:5000/api/v1/users/login', formData);
-      
-      const { message, role, token } = response.data; // Assuming the response contains the role and token
-      setSuccessMessage(message || 'Login successful!');
-      setError(null);
-
-      // Save token to local storage for authentication purposes
-      localStorage.setItem('authToken', token);
-
-      // Redirect user based on their role
-      if (role === 'student') {
-        navigate('/student');
-      } else if (role === 'admin') {
-        navigate('/admin');
-      } else if (role === 'guide') {
-        navigate('/guide');
-      } else {
-        throw new Error('Unknown role!'); // Handle any unexpected roles
-      }
-
-      // Reset form fields
-      setFormData({
-        username: '',
-        password: '',
-      });
-    } catch (err) {
-      setError(err.response?.data?.message || 'Login failed!');
-      setSuccessMessage('');
-    } finally {
-      setLoading(false);
-    }
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   return (
-    <div className="background">
-      <div className="shape"></div>
-      <div className="shape right-shape"></div>
-      <form onSubmit={handleSubmit}>
-        <h3>Login Here</h3>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <Card className="w-full max-w-md p-2">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold">Login</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* User Type Selection */}
+            <div className="grid grid-cols-3 gap-2">
+              {['student', 'guide', 'admin'].map((type) => (
+                <Button
+                  key={type}
+                  type="button"
+                  variant={userType === type ? 'default' : 'outline'}
+                  className="w-full capitalize"
+                  onClick={() => setUserType(type)}
+                >
+                  {type}
+                </Button>
+              ))}
+            </div>
 
-        {error && <p className="error">{error}</p>}
-        {successMessage && <p className="success">{successMessage}</p>}
-        
-        <label htmlFor="username">Username</label>
-        <input
-          type="text"
-          name="username"
-          placeholder="Username"
-          value={formData.username}
-          onChange={handleChange}
-          required
-        />
-        
-        <label htmlFor="password">Password</label>
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          value={formData.password}
-          onChange={handleChange}
-          required
-        />
-        
-        <button type="submit" disabled={loading}>
-          {loading ? 'Logging in...' : 'Log In'}
-        </button>
+            {/* Username Input */}
+            <div className="space-y-2">
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <Input
+                  type="text"
+                  name="username"
+                  placeholder="Username"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
 
-        <button 
-          type="button" 
-          onClick={() => navigate('/register')} 
-          style={{
-            marginTop: '15px',
-            backgroundColor: 'transparent',
-            color: '#ffffff',
-            border: '2px solid #ffffff',
-            padding: '10px 0',
-            fontSize: '16px',
-            fontWeight: '600',
-            borderRadius: '5px',
-            cursor: 'pointer',
-          }}>
-          Go to Registration
-        </button>
-      </form>
+            {/* Password Input */}
+            <div className="space-y-2">
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <Input
+                  type="password"
+                  name="password"
+                  placeholder="Password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
 
-      <style>{`
-        // Your CSS styles remain the same
-      `}</style>
+            {/* Submit Button */}
+            <Button type="submit" className="w-full">
+              Login as {userType.charAt(0).toUpperCase() + userType.slice(1)}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 };

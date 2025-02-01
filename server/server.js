@@ -1,36 +1,27 @@
-const express = require('express');
-const connectDB = require('./config/db'); // Database connection
-const cors = require('cors');
-const dotenv = require('dotenv');
-const userRoutes = require('./routes/userRoutes'); // Import user routes
+const express = require("express");
+const mongoose = require("mongoose");
+const dotenv = require("dotenv");
+const cookieParser = require("cookie-parser");
+const authRoutes = require("./routes/authRoutes");
+const connectDB = require("./db");
 
-dotenv.config(); // Load environment variables
+dotenv.config();
 
 const app = express();
-
-// Middleware
-app.use(cors()); // Enable CORS for cross-origin requests
-app.use(express.json()); // Parse incoming JSON payloads
-
-// Connect to MongoDB
-connectDB(); // Call the connectDB function from db.js
+app.use(express.json());
+app.use(cookieParser());
 
 // Routes
-app.use('/api/v1/users', userRoutes); // Use user routes for login and related operations
+app.use("/api/auth", authRoutes);
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Internal Server Error' });
-});
+// Start the server after connecting to the database
+connectDB();
 
-// Default route for undefined routes
-app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' });
-});
-
-// Start the server
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Handle server termination gracefully
+process.on("SIGINT", () => {
+  console.log("Server shutting down...");
+  mongoose.connection.close(() => {
+    console.log("MongoDB connection closed.");
+    process.exit(0); // Exit the process when MongoDB connection is closed
+  });
 });
