@@ -20,7 +20,7 @@ jobs:
 
     - name: Add backup repository as remote
       run: |
-        git remote add backup https://github.com/ZankhanaSavsani/Internship_Management_System_backup.git || true
+        git remote add backup https://YOUR_GITHUB_USERNAME:${{ secrets.GH_BACKUP_TOKEN }}@github.com/YOUR_GITHUB_USERNAME/Internship_Management_System_backup.git || true
       env:
         your-github-token: ${{ secrets.GH_BACKUP_TOKEN }}
       # This step ensures the backup repository is added, but avoids errors if it already exists.
