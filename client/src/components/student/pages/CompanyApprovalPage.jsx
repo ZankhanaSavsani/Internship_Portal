@@ -233,13 +233,13 @@ const CompanyApprovalForm = () => {
   };
 
   const renderStepIndicator = () => (
-    <div className="mb-8">
-      <div className="flex justify-between items-center">
+    <div className="mb-6">
+      <div className="flex items-center w-full">
         {steps.map((step, index) => (
-          <div key={step.number} className="flex flex-1 items-center">
-            <div className="flex flex-col items-center flex-1">
+          <div key={step.number} className="flex items-center flex-1">
+            <div className="flex flex-col items-center">
               <div
-                className={`w-10 h-10 rounded-full border-2 flex items-center justify-center mb-2
+                className={`w-10 h-10 rounded-full border-2 flex items-center justify-center mb-1
                   ${
                     currentStep === step.number
                       ? "bg-blue-900 border-blue-900 text-white"
@@ -255,10 +255,8 @@ const CompanyApprovalForm = () => {
               </span>
             </div>
             {index < steps.length - 1 && (
-              <div
-                className={`h-1 flex-1 mx-2 ${
-                  currentStep > step.number ? "bg-green-500" : "bg-gray-200"
-                }`}
+              <div className="h-1 flex-1 mx-4 bg-gray-200"
+                style={{ backgroundColor: currentStep > step.number ? "#22c55e" : "#e5e7eb" }}
               />
             )}
           </div>
@@ -266,7 +264,7 @@ const CompanyApprovalForm = () => {
       </div>
     </div>
   );
-
+  
   const renderBasicInfo = () => (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
@@ -535,7 +533,7 @@ const CompanyApprovalForm = () => {
             </Button>
           </div>
 
-          <div>
+          <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Current Project *
             </label>
@@ -639,14 +637,14 @@ const CompanyApprovalForm = () => {
   );
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-    <Card className="w-full max-w-4xl mx-auto bg-gray-50">
-      <CardHeader className="border-b bg-white">
+    <Card className="w-full max-w-4xl mx-auto bg-gray-50 overflow-y-auto max-h-[90vh]">
+      <CardHeader className="border-b bg-white sticky top-0 z-10">
         <CardTitle className="text-2xl font-bold text-gray-800">
           Company Approval Form
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="pt-6">
+      <CardContent className="items-center pt-6 overflow-y-auto">
         {renderStepIndicator()}
         <form onSubmit={handleSubmit}>
           {currentStep === 1 && renderBasicInfo()}
@@ -656,7 +654,7 @@ const CompanyApprovalForm = () => {
         </form>
       </CardContent>
 
-      <CardFooter className="flex justify-between border-t bg-white mt-6 p-6">
+      <CardFooter className="flex justify-between border-t bg-white sticky bottom-0 z-10 mt-6 p-6">
         <Button
           variant="outline"
           onClick={handlePrevious}

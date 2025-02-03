@@ -108,7 +108,7 @@ const StudentProfile = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100 p-4">
-      <Card className="w-full max-w-2xl mx-auto shadow-xl hover:shadow-2xl transition-shadow duration-300">
+      <Card className="w-full max-w-2xl mx-auto shadow-xl hover:shadow-2xl transition-shadow duration-300 max-h-[90vh]">
         <CardHeader className="border-b bg-white">
           <CardTitle className="text-2xl font-bold text-gray-800 text-center flex items-center justify-center gap-2">
             <User className="text-blue-500" /> Student Profile
