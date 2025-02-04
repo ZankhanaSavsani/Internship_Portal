@@ -1,6 +1,6 @@
-const Admin = require("../models/Admin");
-const Guide = require("../models/Guide");
-const Student = require("../models/Student");
+const Admin = require("../models/AdminModel");
+const Guide = require("../models/GuideModel");
+const Student = require("../models/StudentModel");
 const generateToken = require("../utils/tokenUtils");  // Import from utils
 const loginLimiter = require("../middleware/authMiddleware"); // Import rate limiter
 

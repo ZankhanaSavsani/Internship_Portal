@@ -20,6 +20,7 @@ const guideRoutes = require("./routes/guideRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const companyApprovalRoutes = require("./routes/companyApprovalRoutes");
 const internshipCompletionRoutes = require("./routes/internshipCompletionRoutes");
+const summerInternshipStatusRoutes = require("./routes/summerInternshipStatusRoutes");
 
 
 // Use Routes
@@ -28,6 +29,7 @@ app.use("/api/students", studentRoutes);
 app.use("/api/guide",guideRoutes);
 app.use("/api/admin",adminRoutes);
 app.use("/api/company-approvals", companyApprovalRoutes);
+app.use("/api/summer-internships", summerInternshipStatusRoutes);
 app.use("/api/internship-completion", internshipCompletionRoutes);
 
 
