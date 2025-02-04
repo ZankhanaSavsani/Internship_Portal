@@ -101,7 +101,7 @@ const WeeklyReportForm = () => {
               <div
                 className={`w-10 h-10 rounded-full border-2 flex items-center justify-center mb-2
                   ${currentStep === step.number 
-                    ? 'bg-blue-600 border-blue-600 text-white'
+                    ? 'bg-blue-900 border-blue-900 text-white'
                     : currentStep > step.number
                       ? 'bg-green-500 border-green-500 text-white'
                       : 'border-gray-300 text-gray-500'}`}
@@ -303,7 +303,7 @@ const WeeklyReportForm = () => {
         {currentStep < 4 ? (
           <Button 
             onClick={handleNext}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-blue-900 hover:bg-blue-700 text-white"
           >
             Next
             <ChevronRight className="w-4 h-4 ml-2" />

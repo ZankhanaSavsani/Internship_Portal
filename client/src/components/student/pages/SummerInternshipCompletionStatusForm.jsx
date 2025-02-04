@@ -28,7 +28,7 @@ import {
   Upload,
 } from "lucide-react";
 
-const SummerInternshipCompletionStatusForm = () => {
+const SummerInternshipCompletionForm = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     companyName: "",
@@ -564,7 +564,7 @@ const SummerInternshipCompletionStatusForm = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Technologies Details
+              Technologies Details *
             </label>
             <Textarea
               value={formData.technologiesDetails}
@@ -693,7 +693,7 @@ const SummerInternshipCompletionStatusForm = () => {
     <Card className="w-full max-w-4xl mx-auto bg-gray-50 max-h-[90vh]">
       <CardHeader className="border-b bg-white">
         <CardTitle className="text-2xl font-bold text-gray-800">
-          Summer Internship Form
+          Summer Internship Completion Form
         </CardTitle>
       </CardHeader>
 
@@ -745,4 +745,4 @@ const SummerInternshipCompletionStatusForm = () => {
   );
 };
 
-export default SummerInternshipCompletionStatusForm;
+export default SummerInternshipCompletionForm;

@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
-const comparePassword = require("./passwordUtils"); // Import the function
+const comparePassword = require("../utils/passwordUtils"); // Import the function
 
 const studentSchema = new mongoose.Schema(
   {

@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto"); // For generating random passwords
-const comparePassword = require("./passwordUtils"); // Import the function
+const comparePassword = require("../utils/passwordUtils"); // Import the function
 
 const guideSchema = new mongoose.Schema(
   {

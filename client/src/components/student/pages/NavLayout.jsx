@@ -36,7 +36,7 @@ const NavLayout = ({ children }) => {
       text: "Company Approval",
       path: "/CompanyApprovalForm",
     },
-    { icon: <FileText size={20} />, text: "Status", path: "/SummerInternshipForm" },
+    { icon: <FileText size={20} />, text: "Status", path: "/SummerInternshipStatusForm" },
     {
       icon: <CheckSquare size={20} />,
       text: "Completion",

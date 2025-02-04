@@ -128,9 +128,9 @@ const CompanyApprovalForm = () => {
           newErrors.companyName = "Company name is required";
         }
 
-        if (formData.companyWebsite && !validateURL(formData.companyWebsite)) {
+        if (!formData.companyWebsite || !validateURL(formData.companyWebsite)) {
           newErrors.companyWebsite =
-            "Please enter a valid URL (e.g., https://example.com)";
+            "Valid company website URL is required";
         }
 
         if (!formData.companyAddress.trim()) {

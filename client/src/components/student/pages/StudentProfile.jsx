@@ -117,17 +117,17 @@ const StudentProfile = () => {
 
         <CardContent className="grid md:grid-cols-2 gap-8 p-8">
           {/* Profile Information Section */}
-          <div className="space-y-6">
-            <div className="space-y-2">
+          <div className="space-y-4">
+            <div className="space-y-1">
               <h3 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
                 <User className="text-blue-500" /> Profile Details
               </h3>
               <div className="h-1 w-20 bg-blue-500 rounded"></div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-2">
               {/* Name Input with Animation */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">Student Name</label>
                 <div className="relative">
                   <Input
@@ -156,7 +156,7 @@ const StudentProfile = () => {
               </Button>
 
               {/* Read-Only Fields */}
-              <div className="space-y-2 bg-gray-50 rounded-lg p-4">
+              <div className="space-y-1 bg-gray-50 rounded-lg p-1">
                 <InfoField icon={IdCard} label="Student ID" value={userData.studentId} />
                 <InfoField icon={Mail} label="Email" value={userData.email} />
                 <InfoField icon={GraduationCap} label="Semester" value={userData.semester} />
@@ -169,15 +169,15 @@ const StudentProfile = () => {
           </div>
 
           {/* Change Password Section */}
-          <div className="space-y-6">
-            <div className="space-y-2">
+          <div className="space-y-4">
+            <div className="space-y-1">
               <h3 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
                 <Lock className="text-blue-500" /> Change Password
               </h3>
               <div className="h-1 w-20 bg-blue-500 rounded"></div>
             </div>
 
-            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+            <form onSubmit={handlePasswordSubmit} className="space-y-2">
               {[
                 { label: "Current Password", field: "currentPassword", icon: Lock },
                 { label: "New Password", field: "newPassword", icon: Lock },

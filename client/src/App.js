@@ -6,7 +6,7 @@ import Layout from "./components/student/Layout";
 import WeeklyReportForm from "./components/student/pages/WeeklyReportForm";
 import AddWeeklyReportPage from "./components/student/pages/AddWeeklyReportPage";
 import SummerInternshipCompletionForm from "./components/student/pages/SummerInternshipCompletionStatusForm";
-import SummerInternshipForm from "./components/student/pages/SummerInternshipStatusForm";
+import SummerInternshipStatusForm from "./components/student/pages/SummerInternshipStatusForm";
 import StudentProfile from "./components/student/pages/StudentProfile";
 import LoginPage from "./components/pages/LoginPage";
 import PasswordResetPage from "./components/pages/PasswordResetPage";
@@ -35,8 +35,8 @@ function App() {
             element={<SummerInternshipCompletionForm />}
           />
           <Route
-            path="/SummerInternshipForm"
-            element={<SummerInternshipForm />}
+            path="/SummerInternshipStatusForm"
+            element={<SummerInternshipStatusForm />}
           />
           <Route path="/StudentProfile" element={<StudentProfile />} />
         </Route>
