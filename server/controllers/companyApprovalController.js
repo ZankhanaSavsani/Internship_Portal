@@ -1,12 +1,14 @@
 const logger = require("../utils/logger");
 const CompanyApprovalDetails = require("../models/CompanyApprovalFormModel");
 
-// @desc   Get a single company approval by ID
+// @desc   Get a single company approval by ID (excluding soft-deleted records)
 // @route  GET /api/company-approvals/:id
 exports.getCompanyApprovalById = async (req, res, next) => {
   try {
-    const approval = await CompanyApprovalDetails.findById(req.params.id)
-      .populate("student", "name email");
+    const approval = await CompanyApprovalDetails.findOne({
+      _id: req.params.id,
+      isDeleted: false,
+    }).populate("student", "name email");
 
     if (!approval) {
       logger.error(`[GET /api/company-approvals/${req.params.id}] Not Found`);
@@ -20,7 +22,7 @@ exports.getCompanyApprovalById = async (req, res, next) => {
   }
 };
 
-// @desc   Get all company approvals with pagination, sorting, and filtering
+// @desc   Get all company approvals with pagination, sorting, and filtering (excluding soft-deleted records)
 // @route  GET /api/company-approvals
 exports.getAllCompanyApprovals = async (req, res, next) => {
   try {
@@ -29,12 +31,12 @@ exports.getAllCompanyApprovals = async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     // Dynamic sorting
-    const sortField = req.query.sortBy || 'createdAt';
-    const sortOrder = req.query.order === 'asc' ? 1 : -1; 
+    const sortField = req.query.sortBy || "createdAt";
+    const sortOrder = req.query.order === "asc" ? 1 : -1;
     const sortOptions = { [sortField]: sortOrder };
 
     // Dynamic filtering
-    const filterOptions = {};
+    const filterOptions = { isDeleted: false };
     if (req.query.companyName) {
       filterOptions.companyName = { $regex: req.query.companyName, $options: "i" };
     }
@@ -42,7 +44,7 @@ exports.getAllCompanyApprovals = async (req, res, next) => {
       filterOptions.studentName = { $regex: req.query.studentName, $options: "i" };
     }
     if (req.query.status !== undefined) {
-      filterOptions.status = req.query.status === 'true'; // Convert to boolean
+      filterOptions.status = req.query.status === "true"; // Convert to boolean
     }
 
     const approvals = await CompanyApprovalDetails.find(filterOptions)
@@ -72,7 +74,7 @@ exports.createCompanyApproval = async (req, res, next) => {
   try {
     const newApproval = await CompanyApprovalDetails.create(req.body);
     logger.info(`[POST /api/company-approvals] Created ID: ${newApproval._id}`);
-    
+
     res.status(201).json({ success: true, data: newApproval });
   } catch (error) {
     logger.error(`[POST /api/company-approvals] Error: ${error.message}`);
@@ -80,12 +82,12 @@ exports.createCompanyApproval = async (req, res, next) => {
   }
 };
 
-// @desc   Update a company approval request
+// @desc   Update a company approval request (excluding soft-deleted records)
 // @route  PUT /api/company-approvals/:id
 exports.updateCompanyApproval = async (req, res, next) => {
   try {
-    const updatedApproval = await CompanyApprovalDetails.findByIdAndUpdate(
-      req.params.id,
+    const updatedApproval = await CompanyApprovalDetails.findOneAndUpdate(
+      { _id: req.params.id, isDeleted: false },
       req.body,
       { new: true, runValidators: true }
     );
@@ -103,18 +105,22 @@ exports.updateCompanyApproval = async (req, res, next) => {
   }
 };
 
-// @desc   Delete a company approval request
+// @desc   Soft delete a company approval request
 // @route  DELETE /api/company-approvals/:id
 exports.deleteCompanyApproval = async (req, res, next) => {
   try {
-    const deletedApproval = await CompanyApprovalDetails.findByIdAndDelete(req.params.id);
+    const approval = await CompanyApprovalDetails.findById(req.params.id);
 
-    if (!deletedApproval) {
+    if (!approval || approval.isDeleted) {
       logger.error(`[DELETE /api/company-approvals/${req.params.id}] Not Found`);
-      return res.status(404).json({ success: false, message: "Approval record not found" });
+      return res.status(404).json({ success: false, message: "Approval record not found or already deleted" });
     }
 
-    logger.info(`[DELETE /api/company-approvals/${req.params.id}] Deleted`);
+    approval.isDeleted = true;
+    approval.deletedAt = new Date();
+    await approval.save();
+
+    logger.info(`[DELETE /api/company-approvals/${req.params.id}] Soft Deleted`);
     res.status(200).json({ success: true, message: "Approval record deleted successfully" });
   } catch (error) {
     logger.error(`[DELETE /api/company-approvals/${req.params.id}] Error: ${error.message}`);

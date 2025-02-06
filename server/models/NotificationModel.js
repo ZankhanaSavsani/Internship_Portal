@@ -83,6 +83,14 @@ const notificationSchema = new mongoose.Schema(
         message: "Invalid URL format",
       },
     },
+    isDeleted: {
+      type: Boolean,
+      default: false
+    },
+    deletedAt: {
+      type: Date,
+      default: null
+    }
   },
   { timestamps: true } // Automatically adds createdAt and updatedAt timestamps
 );

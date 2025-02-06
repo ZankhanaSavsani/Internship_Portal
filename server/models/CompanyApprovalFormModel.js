@@ -67,6 +67,14 @@ const companyApprovalDetailsSchema = new mongoose.Schema(
       type: String, // Reason for rejection
       default: null, // Null by default, only used when rejected
     },
+    isDeleted: {
+      type: Boolean,
+      default: false
+    },
+    deletedAt: {
+      type: Date,
+      default: null
+    }
   },
   { timestamps: true }
 );

@@ -34,6 +34,14 @@ const adminSchema = new mongoose.Schema(
       enum: ["admin"],
       required: true,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false
+    },
+    deletedAt: {
+      type: Date,
+      default: null
+    }
   },
   {
     timestamps: true,

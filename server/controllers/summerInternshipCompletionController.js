@@ -1,63 +1,60 @@
 const logger = require("../utils/logger");
 const SummerInternshipCompletionStatus = require("../models/SummerInternshipCompletionFormModel");
 
-// @desc   Get all internship completion statuses
+// @desc   Get all internship completion statuses (excluding soft-deleted records)
 // @route  GET /api/summer-internships-completion
 exports.getAllInternshipCompletionStatuses = async (req, res, next) => {
   try {
     // Extract page and limit from query params, defaulting to page 1 and 10 items per page
-    const page = parseInt(req.query.page) || 1; // Default to page 1 if not provided
-    const limit = parseInt(req.query.limit) || 10; // Default to 10 items per page if not provided
-    const skip = (page - 1) * limit; // Skip records based on the current page
+    const page = parseInt(req.query.page) || 1; 
+    const limit = parseInt(req.query.limit) || 10; 
+    const skip = (page - 1) * limit; 
 
     // Dynamic sorting
-    const sortField = req.query.sortBy || 'createdAt'; // Default sorting by createdAt
-    const sortOrder = req.query.order || 'desc'; // Default order is descending
-    const sortOptions = { [sortField]: sortOrder === 'desc' ? -1 : 1 };
+    const sortField = req.query.sortBy || "createdAt"; 
+    const sortOrder = req.query.order === "desc" ? -1 : 1;
+    const sortOptions = { [sortField]: sortOrder };
 
     // Dynamic filtering based on query params
-    const filterOptions = {};
+    const filterOptions = { isDeleted: false }; // Exclude soft-deleted records
     if (req.query.companyName) {
-      filterOptions.companyName = { $regex: req.query.companyName, $options: 'i' }; // Case-insensitive search
+      filterOptions.companyName = { $regex: req.query.companyName, $options: "i" };
     }
     if (req.query.studentName) {
-      filterOptions.studentName = { $regex: req.query.studentName, $options: 'i' }; // Case-insensitive search by student name
+      filterOptions.studentName = { $regex: req.query.studentName, $options: "i" };
     }
 
-    // Find internship completion statuses with pagination, sorting, and filtering
+    // Fetch internship completion statuses with pagination, sorting, and filtering
     const statuses = await SummerInternshipCompletionStatus.find(filterOptions)
-      .populate("student", "name email") // Optionally populate student data
-      .populate("company", "companyName companyAddress") // Optionally populate company data
-      .sort(sortOptions) // Apply sorting
-      .skip(skip) // Skip the records based on the current page
-      .limit(limit); // Limit the number of records returned
+      .populate("student", "name email")
+      .populate("company", "companyName companyAddress")
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(limit);
 
-    // Get the total number of matching records (without pagination)
+    // Get the total number of matching records (excluding soft-deleted ones)
     const total = await SummerInternshipCompletionStatus.countDocuments(filterOptions);
 
-    // Respond with paginated data, including filtering and sorting details
     res.status(200).json({
-      total, // Total number of records in the collection
-      page, // Current page
-      pages: Math.ceil(total / limit), // Total number of pages
-      data: statuses, // The data for the current page
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+      data: statuses,
     });
   } catch (error) {
-    next(error); // Forward any errors to the centralized error handler
+    next(error);
   }
 };
 
-
-// Get a specific internship completion status by ID
-exports.getInternshipCompletionStatusById = async (req, res) => {
+// @desc   Get a specific internship completion status by ID (excluding soft-deleted records)
+// @route  GET /api/summer-internships-completion/:id
+exports.getInternshipCompletionStatusById = async (req, res, next) => {
   try {
-    const status = await SummerInternshipCompletionStatus.findById(
-      req.params.id
-    )
+    const status = await SummerInternshipCompletionStatus.findById(req.params.id)
       .populate("student", "name email")
       .populate("company", "companyName companyAddress");
 
-    if (!status) {
+    if (!status || status.isDeleted) {
       return res.status(404).json({ message: "Internship status not found" });
     }
 
@@ -67,46 +64,54 @@ exports.getInternshipCompletionStatusById = async (req, res) => {
   }
 };
 
-// Create a new internship completion status
-exports.createInternshipCompletionStatus = async (req, res) => {
+// @desc   Create a new internship completion status
+// @route  POST /api/summer-internships-completion
+exports.createInternshipCompletionStatus = async (req, res, next) => {
   try {
     const newStatus = await SummerInternshipCompletionStatus.create(req.body);
+    logger.info(`New internship completion status created: ${newStatus._id}`);
     res.status(201).json(newStatus);
   } catch (error) {
     next(error);
   }
 };
 
-// Update an internship completion status by ID
-exports.updateInternshipCompletionStatus = async (req, res) => {
+// @desc   Update an internship completion status by ID
+// @route  PUT /api/summer-internships-completion/:id
+exports.updateInternshipCompletionStatus = async (req, res, next) => {
   try {
-    const updatedStatus =
-      await SummerInternshipCompletionStatus.findByIdAndUpdate(
-        req.params.id,
-        req.body,
-        { new: true, runValidators: true }
-      );
+    const updatedStatus = await SummerInternshipCompletionStatus.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
 
-    if (!updatedStatus) {
+    if (!updatedStatus || updatedStatus.isDeleted) {
       return res.status(404).json({ message: "Internship status not found" });
     }
 
+    logger.info(`Internship completion status updated: ${updatedStatus._id}`);
     res.status(200).json(updatedStatus);
   } catch (error) {
     next(error);
   }
 };
 
-// Delete an internship completion status by ID
-exports.deleteInternshipCompletionStatus = async (req, res) => {
+// @desc   Soft delete an internship completion status
+// @route  DELETE /api/summer-internships-completion/:id
+exports.deleteInternshipCompletionStatus = async (req, res, next) => {
   try {
-    const deletedStatus =
-      await SummerInternshipCompletionStatus.findByIdAndDelete(req.params.id);
+    const status = await SummerInternshipCompletionStatus.findById(req.params.id);
 
-    if (!deletedStatus) {
-      return res.status(404).json({ message: "Internship status not found" });
+    if (!status || status.isDeleted) {
+      return res.status(404).json({ message: "Internship status not found or already deleted" });
     }
 
+    status.isDeleted = true;
+    status.deletedAt = new Date();
+    await status.save();
+
+    logger.info(`Internship completion status soft deleted: ${status._id}`);
     res.status(200).json({ message: "Internship status deleted successfully" });
   } catch (error) {
     next(error);

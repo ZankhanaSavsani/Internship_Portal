@@ -1,9 +1,23 @@
+// routes/guideRoutes.js
 const express = require("express");
 const router = express.Router();
+const {
+  createGuide,
+  updateGuide,
+  deleteGuide,
+  getAllGuides
+} = require("../controllers/guideController");
 
-// Example route
-router.get("/", (req, res) => {
-  res.send("Student API working!");
-});
+// Create a new guide
+router.post("/", createGuide);
 
-module.exports = router; 
+// Update an existing guide by ID
+router.put("/:id", updateGuide);
+
+// Soft delete a guide by ID
+router.delete("/:id", deleteGuide);
+
+// Get all guides (excluding soft-deleted records)
+router.get("/", getAllGuides);
+
+module.exports = router;

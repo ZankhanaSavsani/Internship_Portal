@@ -1,9 +1,23 @@
+// routes/adminRoutes.js
 const express = require("express");
 const router = express.Router();
+const {
+  createAdmin,
+  updateAdmin,
+  deleteAdmin,
+  getAllAdmins
+} = require("../controllers/adminController");
 
-// Example route
-router.get("/", (req, res) => {
-  res.send("Student API working!");
-});
+// Create a new admin
+router.post("/", createAdmin);
 
-module.exports = router; 
+// Update an existing admin by ID
+router.put("/:id", updateAdmin);
+
+// Soft delete an admin by ID
+router.delete("/:id", deleteAdmin);
+
+// Get all admins (excluding soft-deleted records)
+router.get("/", getAllAdmins);
+
+module.exports = router;

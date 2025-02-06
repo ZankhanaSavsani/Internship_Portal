@@ -67,6 +67,14 @@ const summerInternshipStatusSchema = new mongoose.Schema(
       type: String, // File path or URL to the uploaded file
       required: true,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false
+    },
+    deletedAt: {
+      type: Date,
+      default: null
+    }
   },
   { timestamps: true }
 );

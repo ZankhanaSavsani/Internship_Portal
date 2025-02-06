@@ -41,6 +41,14 @@ const studentSchema = new mongoose.Schema(
       type: String, // Format: "2025-2026"
       required: true,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false
+    },
+    deletedAt: {
+      type: Date,
+      default: null
+    }
   },
   {
     timestamps: true,
