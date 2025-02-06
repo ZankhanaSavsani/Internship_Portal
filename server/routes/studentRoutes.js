@@ -8,21 +8,23 @@ const {
   updateStudent,
   deleteStudent,
 } = require("../controllers/studentController");
+const { checkRoleAccess } = require("../middleware/authMiddleware");
+const validateStudentInput = require("../middleware/validateStudentInput");
 
 // Create a student
-router.post("/", createStudent);
+router.post("/", checkRoleAccess(["admin"]), validateStudentInput, createStudent);
 
 // Get all students
-router.get("/", getAllStudents);
+router.get("/", checkRoleAccess(["admin"]), getAllStudents);
 
 // Get student by ID
-router.get("/:id", getStudentById);
+router.get("/:id",checkRoleAccess(["student", "guide", "admin"]), getStudentById);
 
 // Update student
-router.put("/:id", updateStudent);
+router.put("/:id",checkRoleAccess(["student", "admin"]), validateStudentInput, updateStudent);
 
 // Soft delete student
-router.delete("/:id", deleteStudent);
+router.delete("/:id", checkRoleAccess(["admin"]), deleteStudent);
 
 
 module.exports = router;

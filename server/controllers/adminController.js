@@ -11,13 +11,14 @@ exports.createAdmin = async (req, res, next) => {
     // Check if the username or email already exists
     const existingAdmin = await Admin.findOne({
       $or: [{ username }, { email }],
-      isDeleted: false
+      _id: { $ne: id },
+      isDeleted: false,
     });
 
     if (existingAdmin) {
       return res.status(400).json({
         success: false,
-        message: "Admin with this username or email already exists."
+        message: "Another admin with this username or email already exists.",
       });
     }
 
@@ -28,7 +29,12 @@ exports.createAdmin = async (req, res, next) => {
     logger.info(`[POST /api/admin] Created new admin: ${newAdmin.username}`);
     res.status(201).json({
       success: true,
-      data: newAdmin
+      data: {
+        id: newAdmin._id,
+        username: newAdmin.username,
+        adminName: newAdmin.adminName,
+        email: newAdmin.email,
+      },
     });
   } catch (error) {
     logger.error(`[POST /api/admin] Error: ${error.message}`);
@@ -44,13 +50,14 @@ exports.updateAdmin = async (req, res, next) => {
     const { username, adminName, email, password } = req.body;
 
     // Check if the admin exists and is not deleted
-    const admin = await Admin.findOne({ _id: id, isDeleted: false });
-
-    if (!admin) {
-      return res.status(404).json({
-        success: false,
-        message: "Admin not found or already deleted."
-      });
+    const admin = await Admin.findById(id);
+    if (!admin || admin.isDeleted) {
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "Admin not found or already deleted.",
+        });
     }
 
     // Update admin fields
@@ -62,9 +69,14 @@ exports.updateAdmin = async (req, res, next) => {
     await admin.save();
 
     logger.info(`[PUT /api/admin/${id}] Admin updated: ${admin.username}`);
-    res.status(200).json({
+    res.status(201).json({
       success: true,
-      data: admin
+      data: {
+        id: newAdmin._id,
+        username: newAdmin.username,
+        adminName: newAdmin.adminName,
+        email: newAdmin.email,
+      },
     });
   } catch (error) {
     logger.error(`[PUT /api/admin/${req.params.id}] Error: ${error.message}`);
@@ -84,7 +96,7 @@ exports.deleteAdmin = async (req, res, next) => {
     if (!admin) {
       return res.status(404).json({
         success: false,
-        message: "Admin not found or already deleted."
+        message: "Admin not found or already deleted.",
       });
     }
 
@@ -93,13 +105,17 @@ exports.deleteAdmin = async (req, res, next) => {
     admin.deletedAt = new Date();
     await admin.save();
 
-    logger.info(`[DELETE /api/admin/${id}] Soft deleted admin: ${admin.username}`);
+    logger.info(
+      `[DELETE /api/admin/${id}] Soft deleted admin: ${admin.username}`
+    );
     res.status(200).json({
       success: true,
-      message: "Admin record soft deleted successfully."
+      message: "Admin record soft deleted successfully.",
     });
   } catch (error) {
-    logger.error(`[DELETE /api/admin/${req.params.id}] Error: ${error.message}`);
+    logger.error(
+      `[DELETE /api/admin/${req.params.id}] Error: ${error.message}`
+    );
     next(error);
   }
 };
@@ -108,10 +124,10 @@ exports.deleteAdmin = async (req, res, next) => {
 // @route  GET /api/admin
 exports.getAllAdmins = async (req, res, next) => {
   try {
-    const admins = await Admin.find({ isDeleted: false });
+    const admins = await Admin.find({ isDeleted: false }).select("-password");
     res.status(200).json({
       success: true,
-      data: admins
+      data: admins,
     });
   } catch (error) {
     logger.error(`[GET /api/admin] Error: ${error.message}`);

@@ -11,13 +11,13 @@ exports.createGuide = async (req, res, next) => {
     // Check if the username or email already exists
     const existingGuide = await Guide.findOne({
       $or: [{ username }, { email }],
-      isDeleted: false
+      isDeleted: false,
     });
 
     if (existingGuide) {
       return res.status(400).json({
         success: false,
-        message: "Guide with this username or email already exists."
+        message: "Guide with this username or email already exists.",
       });
     }
 
@@ -28,7 +28,7 @@ exports.createGuide = async (req, res, next) => {
     logger.info(`[POST /api/guide] Created new guide: ${newGuide.username}`);
     res.status(201).json({
       success: true,
-      data: newGuide
+      data: newGuide,
     });
   } catch (error) {
     logger.error(`[POST /api/guide] Error: ${error.message}`);
@@ -49,7 +49,7 @@ exports.updateGuide = async (req, res, next) => {
     if (!guide) {
       return res.status(404).json({
         success: false,
-        message: "Guide not found or already deleted."
+        message: "Guide not found or already deleted.",
       });
     }
 
@@ -64,7 +64,7 @@ exports.updateGuide = async (req, res, next) => {
     logger.info(`[PUT /api/guide/${id}] Guide updated: ${guide.username}`);
     res.status(200).json({
       success: true,
-      data: guide
+      data: guide,
     });
   } catch (error) {
     logger.error(`[PUT /api/guide/${req.params.id}] Error: ${error.message}`);
@@ -84,7 +84,7 @@ exports.deleteGuide = async (req, res, next) => {
     if (!guide) {
       return res.status(404).json({
         success: false,
-        message: "Guide not found or already deleted."
+        message: "Guide not found or already deleted.",
       });
     }
 
@@ -93,13 +93,43 @@ exports.deleteGuide = async (req, res, next) => {
     guide.deletedAt = new Date();
     await guide.save();
 
-    logger.info(`[DELETE /api/guide/${id}] Soft deleted guide: ${guide.username}`);
+    logger.info(
+      `[DELETE /api/guide/${id}] Soft deleted guide: ${guide.username}`
+    );
     res.status(200).json({
       success: true,
-      message: "Guide record soft deleted successfully."
+      message: "Guide record soft deleted successfully.",
     });
   } catch (error) {
-    logger.error(`[DELETE /api/guide/${req.params.id}] Error: ${error.message}`);
+    logger.error(
+      `[DELETE /api/guide/${req.params.id}] Error: ${error.message}`
+    );
+    next(error);
+  }
+};
+
+// @desc   Get a single guide by ID (excluding soft-deleted records)
+// @route  GET /api/guide/:id
+exports.getGuideById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Find the guide and exclude soft-deleted records
+    const guide = await Guide.findOne({ _id: id, isDeleted: false });
+
+    if (!guide) {
+      return res.status(404).json({
+        success: false,
+        message: "Guide not found or already deleted.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: guide,
+    });
+  } catch (error) {
+    logger.error(`[GET /api/guide/${req.params.id}] Error: ${error.message}`);
     next(error);
   }
 };
@@ -111,7 +141,7 @@ exports.getAllGuides = async (req, res, next) => {
     const guides = await Guide.find({ isDeleted: false });
     res.status(200).json({
       success: true,
-      data: guides
+      data: guides,
     });
   } catch (error) {
     logger.error(`[GET /api/guide] Error: ${error.message}`);
