@@ -22,6 +22,7 @@ const companyApprovalRoutes = require("./routes/companyApprovalRoutes");
 const summerInternshipCompletionRoutes = require("./routes/summerInternshipCompletionRoutes");
 const summerInternshipStatusRoutes = require("./routes/summerInternshipStatusRoutes");
 const weeklyReportRoutes = require("./routes/weeklyReportRoutes");
+const downloadRoutes = require('./routes/downloadRoutes');
 
 
 // Use Routes
@@ -33,6 +34,7 @@ app.use("/api/company-approvals", companyApprovalRoutes);
 app.use("/api/summer-internships", summerInternshipStatusRoutes);
 app.use("/api/internship-completion", summerInternshipCompletionRoutes);
 app.use("/api/weeklyReport", weeklyReportRoutes);
+app.use('/api', downloadRoutes);
 
 
 // Error handler 

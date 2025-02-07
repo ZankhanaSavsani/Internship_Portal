@@ -3,8 +3,6 @@ require('dotenv').config();
 
 // Connection options
 const options = {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
   connectTimeoutMS: 10000,
   socketTimeoutMS: 45000,
 };

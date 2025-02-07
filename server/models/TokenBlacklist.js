@@ -17,8 +17,6 @@ const TokenBlacklistSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Index to ensure efficient querying by token
-TokenBlacklistSchema.index({ token: 1 }, { unique: true });
 
 const TokenBlacklist = mongoose.model('TokenBlacklist', TokenBlacklistSchema);
 
