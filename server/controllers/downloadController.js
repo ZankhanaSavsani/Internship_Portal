@@ -1,12 +1,14 @@
+// downloadController.js
 const ExcelJS = require('exceljs');
-const Admin = require("../models/AdminModel");
-const Guide = require("../models/GuideModel");
-const Student = require("../models/StudentModel");
-const TokenBlacklist = require("../models/TokenBlacklist");
-const CompanyApprovalDetails = require("../models/CompanyApprovalFormModel");
-const SummerInternshipStatus = require("../models/SummerInternshipStatusFormModel");
-const SummerInternshipCompletionStatus = require("../models/SummerInternshipCompletionFormModel");
-const WeeklyReport = require("../models/WeeklyProgressReportModel");
+const mongoose = require('mongoose');
+const Admin = require('../models/AdminModel');
+const Guide = require('../models/GuideModel');
+const Student = require('../models/StudentModel');
+const TokenBlacklist = require('../models/TokenBlacklist');
+const CompanyApprovalDetails = require('../models/CompanyApprovalFormModel');
+const SummerInternshipStatus = require('../models/SummerInternshipStatusFormModel');
+const SummerInternshipCompletionStatus = require('../models/SummerInternshipCompletionFormModel');
+const WeeklyReport = require('../models/WeeklyProgressReportModel');
 
 // Model mapping with display names for better worksheet naming
 const modelMapping = {
@@ -28,7 +30,7 @@ class ValidationError extends Error {
     }
 }
 
-// Helper functions for better code organization
+// Helper Functions
 const validateDateRange = (startDate, endDate) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -48,27 +50,57 @@ const validateDateRange = (startDate, endDate) => {
     return { start, end };
 };
 
-const flattenObject = (obj, prefix = '') => {
-    return Object.keys(obj).reduce((acc, key) => {
-        const prefixedKey = prefix ? `${prefix}.${key}` : key;
-        if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
-            Object.assign(acc, flattenObject(obj[key], prefixedKey));
-        } else {
-            acc[prefixedKey] = obj[key];
+const sanitizeMongoData = (item) => {
+    const sanitized = {};
+    
+    for (const [key, value] of Object.entries(item)) {
+        // Convert ObjectId to string
+        if (value instanceof mongoose.Types.ObjectId) {
+            sanitized[key] = value.toString();
         }
-        return acc;
-    }, {});
+        // Convert Date objects to ISO string
+        else if (value instanceof Date) {
+            sanitized[key] = value.toISOString();
+        }
+        // Handle nested objects
+        else if (value && typeof value === 'object' && !Array.isArray(value)) {
+            // Skip if it's a Buffer
+            if (!Buffer.isBuffer(value)) {
+                sanitized[key] = sanitizeMongoData(value);
+            }
+        }
+        // Handle arrays
+        else if (Array.isArray(value)) {
+            sanitized[key] = value.map(item => 
+                item instanceof mongoose.Types.ObjectId ? 
+                    item.toString() : 
+                    (item && typeof item === 'object' ? 
+                        sanitizeMongoData(item) : 
+                        item
+                    )
+            );
+        }
+        // Regular values
+        else {
+            sanitized[key] = value;
+        }
+    }
+    
+    return sanitized;
 };
 
 const formatColumnHeaders = (data) => {
     if (!data || !data.length) return [];
-
-    const flattenedData = data.map(item => flattenObject(item));
-    return Object.keys(flattenedData[0]).map(key => ({
-        header: key.replace(/([A-Z])/g, ' $1').trim(), // Convert camelCase to Title Case
+    
+    const headers = Object.keys(data[0]).map(key => ({
+        header: key.split('.').map(part => 
+            part.replace(/([A-Z])/g, ' $1').trim()
+        ).join(' - '),
         key: key,
-        width: 15 // Default width for better readability
+        width: 15
     }));
+
+    return headers;
 };
 
 const configureWorksheet = (worksheet, columns) => {
@@ -81,8 +113,6 @@ const configureWorksheet = (worksheet, columns) => {
             column.width = 20;
         } else if (column.header.toLowerCase().includes('id')) {
             column.width = 25;
-        } else if (typeof column.values?.[0] === 'number') {
-            column.numFmt = '#,##0.00';
         }
     });
 
@@ -99,6 +129,7 @@ const sanitizeFilename = (filename) => {
     return filename.replace(/[^a-zA-Z0-9-_\.]/g, '_');
 };
 
+// Main controller function
 const downloadData = async (req, res) => {
     try {
         const { model } = req.params;
@@ -115,7 +146,7 @@ const downloadData = async (req, res) => {
         // Validate date range
         const { start, end } = validateDateRange(startDate, endDate);
 
-        // Fetch data with pagination to handle large datasets
+        // Fetch data with pagination
         const batchSize = 1000;
         let data = [];
         let skip = 0;
@@ -130,7 +161,12 @@ const downloadData = async (req, res) => {
                 .limit(batchSize)
                 .lean();
 
-            data = data.concat(batch);
+            const sanitizedBatch = batch.map(item => ({
+                ID: item._id.toString(),
+                ...sanitizeMongoData(item)
+            }));
+
+            data = data.concat(sanitizedBatch);
             skip += batchSize;
         } while (batch.length === batchSize);
 
@@ -141,23 +177,24 @@ const downloadData = async (req, res) => {
             });
         }
 
-        // Create workbook and worksheet
+        // Create workbook
         const workbook = new ExcelJS.Workbook();
-        workbook.creator = 'Your Application Name';
+        workbook.creator = 'Internship Management System';
         workbook.created = new Date();
 
+        // Add worksheet
         const worksheet = workbook.addWorksheet(modelMapping[model].displayName);
         const columns = formatColumnHeaders(data);
         configureWorksheet(worksheet, columns);
 
-        // Add data rows with progress tracking for large datasets
+        // Add data rows in batches
         const rowsPerBatch = 100;
         for (let i = 0; i < data.length; i += rowsPerBatch) {
             const batch = data.slice(i, i + rowsPerBatch);
             worksheet.addRows(batch);
         }
 
-        // Auto-filter for all columns
+        // Add autofilter
         worksheet.autoFilter = {
             from: { row: 1, column: 1 },
             to: { row: 1, column: columns.length }
