@@ -11,7 +11,7 @@ exports.createAdmin = async (req, res, next) => {
     // Check if the username or email already exists
     const existingAdmin = await Admin.findOne({
       $or: [{ username }, { email }],
-      _id: { $ne: id },
+      // _id: { $ne: id },
       isDeleted: false,
     });
 

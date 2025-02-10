@@ -1,6 +1,7 @@
 // controllers/studentController.js
 const Student = require("../models/StudentModel");
 const logger = require("../utils/logger");
+const { sendEmail } = require("../utils/mailer");
 
 // @desc   Create a new student record
 // @route  POST /api/students
@@ -8,21 +9,44 @@ exports.createStudent = async (req, res, next) => {
   try {
     const { studentId, studentName, semester } = req.body;
 
+    // Create the student
     const student = new Student({
       studentId,
       studentName,
       semester,
     });
 
+    // Save the student to the database
     await student.save();
     logger.info(`[POST /api/students] Created student ID: ${student._id}`);
 
+    // Prepare email content
+    const emailSubject = "Your Login Credentials";
+    const emailContent = `
+      Hello ${student.studentName},
+
+      Your account has been created successfully. Below are your login credentials:
+
+      Username (Email): ${student.email}
+      Password: ${student.password}
+
+      Please change your password after logging in for the first time.
+
+      Regards,
+      Your Institution
+    `;
+
+    // Send email with credentials
+    await sendEmail(student.email, emailSubject, emailContent);
+
+    // Respond to the client
     res.status(201).json({ success: true, data: student });
   } catch (error) {
     logger.error(`[POST /api/students] Error: ${error.message}`);
     next(error);
   }
 };
+
 
 // @desc   Get all students
 // @route  GET /api/students

@@ -11,7 +11,7 @@ const {
 } = require("../controllers/adminController");
 
 // Create a new admin
-router.post("/", checkRoleAccess(["admin"]), validateAdminInput, createAdmin);
+router.post("/", validateAdminInput, createAdmin);
 
 // Update an existing admin by ID
 router.put("/:id", checkRoleAccess(["admin"]), validateAdminInput, updateAdmin);
