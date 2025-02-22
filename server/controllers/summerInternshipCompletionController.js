@@ -1,5 +1,7 @@
 const logger = require("../utils/logger");
+const { uploadFileToDrive, deleteLocalFile } = require("../utils/googleDriveUtils");
 const SummerInternshipCompletionStatus = require("../models/SummerInternshipCompletionFormModel");
+
 
 // @desc   Get all internship completion statuses (excluding soft-deleted records)
 // @route  GET /api/summer-internships-completion
@@ -68,10 +70,78 @@ exports.getInternshipCompletionStatusById = async (req, res, next) => {
 // @route  POST /api/summer-internships-completion
 exports.createInternshipCompletionStatus = async (req, res, next) => {
   try {
-    const newStatus = await SummerInternshipCompletionStatus.create(req.body);
+    const { files } = req;
+    let internshipData = { ...req.body };
+
+    // Check if completion certificate is provided (required)
+    if (!files?.completionCertificate?.[0]) {
+      return res.status(400).json({
+        success: false,
+        message: "Completion certificate is required"
+      });
+    }
+
+    // Upload completion certificate to Google Drive
+    try {
+      const completionCertificateUrl = await uploadFileToDrive(
+        files.completionCertificate[0],
+        process.env.GOOGLE_DRIVE_FOLDER_ID
+      );
+      internshipData.completionCertificate = completionCertificateUrl;
+      
+      // Delete local file after upload
+      await deleteLocalFile(files.completionCertificate[0].path);
+    } catch (error) {
+      logger.error('Error uploading completion certificate:', error);
+      return res.status(500).json({
+        success: false,
+        message: "Error uploading completion certificate"
+      });
+    }
+
+    // Upload stipend proof if provided (optional)
+    if (files?.stipendProof?.[0]) {
+      try {
+        const stipendProofUrl = await uploadFileToDrive(
+          files.stipendProof[0],
+          process.env.GOOGLE_DRIVE_FOLDER_ID
+        );
+        internshipData.stipendProof = stipendProofUrl;
+        
+        // Delete local file after upload
+        await deleteLocalFile(files.stipendProof[0].path);
+      } catch (error) {
+        logger.error('Error uploading stipend proof:', error);
+        return res.status(500).json({
+          success: false,
+          message: "Error uploading stipend proof"
+        });
+      }
+    }
+
+    // Create the internship completion status in database
+    const newStatus = await SummerInternshipCompletionStatus.create(internshipData);
+
+    // Log success
     logger.info(`New internship completion status created: ${newStatus._id}`);
-    res.status(201).json(newStatus);
+
+    // Send response
+    res.status(201).json({
+      success: true,
+      data: newStatus,
+    });
+
   } catch (error) {
+    // If any error occurs, make sure to clean up any uploaded files
+    if (req.files) {
+      Object.values(req.files).forEach(fileArray => {
+        fileArray.forEach(file => {
+          if (file.path) {
+            deleteLocalFile(file.path);
+          }
+        });
+      });
+    }
     next(error);
   }
 };

@@ -6,11 +6,6 @@ const validateStudentInput = [
     .notEmpty().withMessage("Student ID is required")
     .isLength({ min: 3, max: 20 }).withMessage("Student ID must be between 3 and 20 characters"),
 
-  body("studentName")
-    .trim()
-    .notEmpty().withMessage("Student name is required")
-    .isLength({ min: 3 }).withMessage("Student name must be at least 3 characters long"),
-
   body("semester")
     .trim()
     .notEmpty().withMessage("Semester is required")

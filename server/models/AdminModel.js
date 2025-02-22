@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
-const crypto = require("crypto"); // For generating random passwords
 const comparePassword = require("../utils/passwordUtils"); // Import the function
 
 const adminSchema = new mongoose.Schema(
@@ -36,12 +35,12 @@ const adminSchema = new mongoose.Schema(
     },
     isDeleted: {
       type: Boolean,
-      default: false
+      default: false,
     },
     deletedAt: {
       type: Date,
-      default: null
-    }
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -51,10 +50,6 @@ const adminSchema = new mongoose.Schema(
 // Pre-save hook to generate password and hash it
 adminSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next(); // Only hash if password is modified
-
-  // Generate a random password
-  const randomPassword = crypto.randomBytes(8).toString("hex"); 
-  this.password = randomPassword;
 
   // Hash the password before saving
   this.password = await bcrypt.hash(this.password, 10);

@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
 const comparePassword = require("../utils/passwordUtils"); // Import the function
 
 const studentSchema = new mongoose.Schema(
@@ -18,7 +17,7 @@ const studentSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
       lowercase: true,
     },
@@ -39,48 +38,47 @@ const studentSchema = new mongoose.Schema(
     },
     year: {
       type: String, // Format: "2025-2026"
-      required: true,
+      required: false,
     },
     isDeleted: {
       type: Boolean,
-      default: false
+      default: false,
     },
     deletedAt: {
       type: Date,
-      default: null
-    }
+      default: null,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// Create a compound index for `username`, `semester`, and `year`
+// Create a compound index for `studentId`, `semester`, and `year`
 studentSchema.index({ studentId: 1, semester: 1, year: 1 }, { unique: true });
 
 // Pre-save hook for hashing password and setting email
 studentSchema.pre("save", async function (next) {
+  try {
+    // Convert studentId to lowercase
+    this.studentId = this.studentId.toLowerCase();
 
-  if (!this.isModified("password")) return next(); // Only hash if password is modified
+    // Automatically generate email from the studentId
+    this.email = `${this.studentId}@charusat.edu.in`;
 
-  // Convert studentId to lowercase
-  this.studentId = this.studentId.toLowerCase();
+    // Hash the password before saving
+    if (this.isModified("password")) {
+      this.password = await bcrypt.hash(this.password, 10);
+    }
 
-  // Automatically generate email from the studentId
-  this.email = `${this.studentId}@charusat.edu.in`;
+    // Auto-generate academic year
+    const currentYear = new Date().getFullYear();
+    this.year = `${currentYear}-${currentYear + 1}`;
 
-  // Generate a random password
-  const randomPassword = crypto.randomBytes(8).toString("hex"); 
-  this.password = randomPassword;
-
-  // Hash the password before saving
-  this.password = await bcrypt.hash(this.password, 10);
-
-  // Auto-generate academic year
-  const currentYear = new Date().getFullYear();
-  this.year = `${currentYear}-${currentYear + 1}`;
-
-  next();
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
 studentSchema.methods.comparePassword = comparePassword;

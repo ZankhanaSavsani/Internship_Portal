@@ -2,18 +2,22 @@
 const Student = require("../models/StudentModel");
 const logger = require("../utils/logger");
 const { sendEmail } = require("../utils/mailer");
+const crypto = require("crypto");
 
 // @desc   Create a new student record
 // @route  POST /api/students
 exports.createStudent = async (req, res, next) => {
   try {
-    const { studentId, studentName, semester } = req.body;
+    const { studentId, semester } = req.body;
 
-    // Create the student
+    // Generate random password before creating student
+    const plainPassword = crypto.randomBytes(8).toString("hex");
+
+    // Create the student with the plain password
     const student = new Student({
       studentId,
-      studentName,
       semester,
+      password: plainPassword, // This will be hashed in the pre-save hook
     });
 
     // Save the student to the database
@@ -23,12 +27,12 @@ exports.createStudent = async (req, res, next) => {
     // Prepare email content
     const emailSubject = "Your Login Credentials";
     const emailContent = `
-      Hello ${student.studentName},
+      Hello,
 
       Your account has been created successfully. Below are your login credentials:
 
-      Username (Email): ${student.email}
-      Password: ${student.password}
+      Username: ${studentId}
+      Password: ${plainPassword}
 
       Please change your password after logging in for the first time.
 
@@ -40,13 +44,19 @@ exports.createStudent = async (req, res, next) => {
     await sendEmail(student.email, emailSubject, emailContent);
 
     // Respond to the client
-    res.status(201).json({ success: true, data: student });
+    res.status(201).json({
+      success: true,
+      data: {
+        id: student._id,
+        studentId: student.studentId,
+        email: student.email,
+      },
+    });
   } catch (error) {
     logger.error(`[POST /api/students] Error: ${error.message}`);
     next(error);
   }
 };
-
 
 // @desc   Get all students
 // @route  GET /api/students
@@ -64,15 +74,21 @@ exports.getAllStudents = async (req, res, next) => {
 // @route  GET /api/students/:id
 exports.getStudentById = async (req, res, next) => {
   try {
-    const student = await Student.findById(req.params.id).where({ isDeleted: false });
+    const student = await Student.findById(req.params.id).where({
+      isDeleted: false,
+    });
 
     if (!student) {
-      return res.status(404).json({ success: false, message: "Student not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Student not found" });
     }
 
     res.status(200).json({ success: true, data: student });
   } catch (error) {
-    logger.error(`[GET /api/students/${req.params.id}] Error: ${error.message}`);
+    logger.error(
+      `[GET /api/students/${req.params.id}] Error: ${error.message}`
+    );
     next(error);
   }
 };
@@ -88,12 +104,16 @@ exports.updateStudent = async (req, res, next) => {
     );
 
     if (!updatedStudent) {
-      return res.status(404).json({ success: false, message: "Student not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Student not found" });
     }
 
     res.status(200).json({ success: true, data: updatedStudent });
   } catch (error) {
-    logger.error(`[PUT /api/students/${req.params.id}] Error: ${error.message}`);
+    logger.error(
+      `[PUT /api/students/${req.params.id}] Error: ${error.message}`
+    );
     next(error);
   }
 };
@@ -105,16 +125,25 @@ exports.deleteStudent = async (req, res, next) => {
     const student = await Student.findById(req.params.id);
 
     if (!student || student.isDeleted) {
-      return res.status(404).json({ success: false, message: "Student not found or already deleted" });
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "Student not found or already deleted",
+        });
     }
 
     student.isDeleted = true;
     student.deletedAt = new Date();
     await student.save();
 
-    res.status(200).json({ success: true, message: "Student deleted successfully" });
+    res
+      .status(200)
+      .json({ success: true, message: "Student deleted successfully" });
   } catch (error) {
-    logger.error(`[DELETE /api/students/${req.params.id}] Error: ${error.message}`);
+    logger.error(
+      `[DELETE /api/students/${req.params.id}] Error: ${error.message}`
+    );
     next(error);
   }
 };

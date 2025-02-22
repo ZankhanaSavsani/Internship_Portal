@@ -12,7 +12,7 @@ const { checkRoleAccess } = require("../middleware/authMiddleware");
 const validateStudentInput = require("../middleware/validateStudentInput");
 
 // Create a student
-router.post("/", checkRoleAccess(["admin"]), validateStudentInput, createStudent);
+router.post("/", validateStudentInput, createStudent);
 
 // Get all students
 router.get("/", checkRoleAccess(["admin"]), getAllStudents);

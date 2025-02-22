@@ -1,17 +1,18 @@
 // controllers/adminController.js
 const Admin = require("../models/AdminModel");
 const logger = require("../utils/logger");
+const { sendEmail } = require("../utils/mailer");
+const crypto = require("crypto"); // For generating random passwords
 
 // @desc   Create a new admin
 // @route  POST /api/admin
 exports.createAdmin = async (req, res, next) => {
   try {
-    const { username, adminName, email, password } = req.body;
+    const { username, adminName, email } = req.body;
 
     // Check if the username or email already exists
     const existingAdmin = await Admin.findOne({
       $or: [{ username }, { email }],
-      // _id: { $ne: id },
       isDeleted: false,
     });
 
@@ -22,11 +23,40 @@ exports.createAdmin = async (req, res, next) => {
       });
     }
 
-    // Create a new admin
-    const newAdmin = new Admin({ username, adminName, email, password });
+    // Generate random password before creating student
+    const plainPassword = crypto.randomBytes(8).toString("hex");
+
+    // Create a new admin with a temporary password
+    const newAdmin = new Admin({
+      username,
+      adminName,
+      email,
+      password: plainPassword,
+    });
     await newAdmin.save();
 
     logger.info(`[POST /api/admin] Created new admin: ${newAdmin.username}`);
+
+    // Prepare email content
+    const emailSubject = "Your Admin Account Credentials";
+    const emailContent = `
+      Hello ${newAdmin.adminName},
+
+      Your admin account has been created successfully. Below are your login credentials:
+
+      Username: ${newAdmin.username}
+      Password: ${plainPassword}
+
+      Please change your password after logging in for the first time.
+
+      Regards,
+      Your Organization
+    `;
+
+    // Send email with credentials
+    await sendEmail(newAdmin.email, emailSubject, emailContent);
+
+    // Respond to the client
     res.status(201).json({
       success: true,
       data: {
@@ -52,12 +82,10 @@ exports.updateAdmin = async (req, res, next) => {
     // Check if the admin exists and is not deleted
     const admin = await Admin.findById(id);
     if (!admin || admin.isDeleted) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "Admin not found or already deleted.",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found or already deleted.",
+      });
     }
 
     // Update admin fields

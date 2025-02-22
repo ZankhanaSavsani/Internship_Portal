@@ -107,13 +107,14 @@ exports.login = [
   async (req, res) => {
     const startTime = process.env.NODE_ENV !== 'production' ? Date.now() : null;
     try {
-      const { role, username, password } = req.body;
+      const { role, username, password, studentId } = req.body;
 
       // Input validation with detailed logging
-      if (!role || !username || !password) {
-        const missingFields = ['role', 'username', 'password']
-          .filter(field => !req.body[field]);
-        
+      if (!role || !password || (!username && !studentId)) {
+        const missingFields = ['role', 'password'];
+        if (!username && role !== 'student') missingFields.push('username');
+        if (!studentId && role === 'student') missingFields.push('studentId');
+
         logger.warn('[LOGIN ATTEMPT] Missing fields', { missingFields });
         return res.status(400).json({
           success: false,
@@ -134,20 +135,23 @@ exports.login = [
         });
       }
 
+      // Determine the login identifier based on role
+      const loginIdentifier = role.toLowerCase() === 'student' ? { studentId } : { username };
+
       // User authentication
-      const user = await UserModel.findOne({ username })
+      const user = await UserModel.findOne(loginIdentifier)
         .select('+password')
         .exec();
 
       if (!user || !(await user.comparePassword(password))) {
         logger.warn('[LOGIN FAILED]', {
-          username,
+          [role.toLowerCase() === 'student' ? 'studentId' : 'username']: role.toLowerCase() === 'student' ? studentId : username,
           role,
           reason: !user ? 'User not found' : 'Invalid password'
         });
         return res.status(401).json({
           success: false,
-          message: "Invalid username or password"
+          message: "Invalid credentials"
         });
       }
 
@@ -166,25 +170,34 @@ exports.login = [
       // Log success (with performance metrics in non-production)
       const logData = {
         userId: user._id,
-        username,
         role,
         loginTime: new Date()
       };
+
+      if (role.toLowerCase() === 'student') {
+        logData.studentId = user.studentId;
+      } else {
+        logData.username = user.username;
+      }
 
       if (startTime) {
         logData.processDuration = Date.now() - startTime;
       }
 
       logger.info('[LOGIN SUCCESS]', logData);
-      
+
       return res.json({
         success: true,
         message: "Login successful",
         user: {
           id: user._id,
           role: user.role,
-          username: user.username,
+          [role.toLowerCase() === 'student' ? 'studentId' : 'username']: role.toLowerCase() === 'student' ? user.studentId : user.username,
           lastLogin: user.lastLogin
+        },
+        tokens: {
+          accessToken,
+          refreshToken
         }
       });
 
@@ -200,7 +213,7 @@ exports.login = [
       }
 
       logger.error('[LOGIN ERROR]', errorLog);
-      
+
       return res.status(500).json({
         success: false,
         message: "An error occurred during login"
