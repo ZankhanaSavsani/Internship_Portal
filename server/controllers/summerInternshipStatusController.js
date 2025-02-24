@@ -1,5 +1,7 @@
 const SummerInternshipStatus = require("../models/SummerInternshipStatusFormModel");
 const logger = require("../utils/logger");
+const { uploadFileToDrive, deleteLocalFile } = require("../utils/googleDriveUtils");
+
 
 // @desc   Get all internship statuses (excluding soft-deleted ones)
 // @route  GET /api/summer-internships
@@ -62,7 +64,26 @@ exports.getInternshipStatusById = async (req, res, next) => {
 // @route  POST /api/summer-internships
 exports.createInternshipStatus = async (req, res, next) => {
   try {
-    const newStatus = await SummerInternshipStatus.create(req.body);
+    const { body, file } = req; // Use req.file for single file uploads
+
+    // Log the request body and file for debugging
+    console.log("Request Body:", body);
+    console.log("Request File:", file);
+
+    // Check if offerLetter file is uploaded
+    if (!file) {
+      return res.status(400).json({ message: "Offer letter file is required" });
+    }
+
+    // Upload offerLetter to Google Drive
+    const offerLetterUrl = await uploadFileToDrive(file, process.env.GOOGLE_DRIVE_FOLDER_ID);
+    body.offerLetter = offerLetterUrl; // Save the file URL in the request body
+
+    // Delete the local file after upload
+    deleteLocalFile(file.path);
+
+    // Create the internship status
+    const newStatus = await SummerInternshipStatus.create(body);
     res.status(201).json(newStatus);
   } catch (error) {
     next(error);

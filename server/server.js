@@ -32,7 +32,7 @@ app.use("/api/students", studentRoutes);
 app.use("/api/guide",guideRoutes);
 app.use("/api/admin",adminRoutes);
 app.use("/api/company-approvals", companyApprovalRoutes);
-app.use("/api/summer-internships", summerInternshipStatusRoutes);
+app.use("/api/summer-internship-status", summerInternshipStatusRoutes);
 app.use("/api/internship-completion", summerInternshipCompletionRoutes);
 app.use("/api/weeklyReport", weeklyReportRoutes);
 app.use('/api', downloadRoutes);

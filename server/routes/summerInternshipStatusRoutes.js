@@ -1,7 +1,6 @@
-// internshipStatusRoutes.js
-
 const express = require("express");
 const router = express.Router();
+const upload = require("../middleware/multerMiddleware");
 const {
   getAllInternshipStatuses,
   getInternshipStatusById,
@@ -10,13 +9,23 @@ const {
   deleteInternshipStatus,
 } = require("../controllers/summerInternshipStatusController");
 const { checkRoleAccess } = require("../middleware/authMiddleware");
-
-// Import validation middleware from the middleware file
 const { validateInternshipStatus } = require("../middleware/validateInternshipStatusMiddleware");
 
-// Apply validation middleware to POST & PUT routes
-router.post("/", checkRoleAccess(["student"]), validateInternshipStatus, createInternshipStatus);
-router.put("/:id", checkRoleAccess(["student", "admin"]), validateInternshipStatus, updateInternshipStatus);
+// Apply Multer middleware for file uploads
+router.post(
+  "/",
+  upload.single("offerLetter"), // Handle single file upload
+  validateInternshipStatus,
+  createInternshipStatus
+);
+
+router.put(
+  "/:id",
+  checkRoleAccess(["student", "admin"]),
+  upload.single("offerLetter"), // Handle single file upload
+  validateInternshipStatus,
+  updateInternshipStatus
+);
 
 // GET all internship statuses
 router.get("/", checkRoleAccess(["admin"]), getAllInternshipStatuses);
