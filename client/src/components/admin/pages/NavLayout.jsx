@@ -34,22 +34,22 @@ const NavLayout = ({ children }) => {
     {
       icon: <Building2 size={20} />,
       text: "Company Approval",
-      path: "/CompanyApprovalForm",
+      path: "/admin/CompanyApprovalForm",
     },
     { 
       icon: <FileText size={20} />, 
       text: "Status", 
-      path: "/SummerInternshipStatusForm" 
+      path: "/admin/SummerInternshipStatusForm" 
     },
     {
       icon: <CheckSquare size={20} />,
       text: "Completion",
-      path: "/SummerInternshipCompletionForm",
+      path: "/admin/SummerInternshipCompletionForm",
     },
     {
       icon: <ClipboardList size={20} />,
       text: "Weekly Reports",
-      path: "/AddWeeklyReportPage",
+      path: "/admin/AddWeeklyReportPage",
     },
     {
       icon: <Users size={20} />,
@@ -73,7 +73,7 @@ const NavLayout = ({ children }) => {
   };
 
   const handleStudentProfile = () => {
-    navigate("/StudentProfile");
+    navigate("/admin/StudentProfile");
   };
 
   return (

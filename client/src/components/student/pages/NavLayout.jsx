@@ -23,39 +23,42 @@ import {
 } from "../../ui/dropdown-menu";
 import { Button } from "../../ui/button";
 import { Badge } from "../../ui/badge";
+import { useAuth } from "../../layouts/AuthProvider";
 
 const NavLayout = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(3);
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const navItems = [
     // { icon: <LayoutDashboard size={20} />, text: "Dashboard", path: "/Dashboard" },
     {
       icon: <Building2 size={20} />,
       text: "Company Approval",
-      path: "/CompanyApprovalForm",
+      path: "/student/CompanyApprovalForm",
     },
-    { icon: <FileText size={20} />, text: "Status", path: "/SummerInternshipStatusForm" },
+    { icon: <FileText size={20} />, text: "Status", path: "/student/SummerInternshipStatusForm" },
     {
       icon: <CheckSquare size={20} />,
       text: "Completion",
-      path: "/SummerInternshipCompletionForm",
+      path: "/student/SummerInternshipCompletionForm",
     },
     {
       icon: <ClipboardList size={20} />,
       text: "Weekly Reports",
-      path: "/AddWeeklyReportPage",
+      path: "/student/AddWeeklyReportPage",
     },
-    { icon: <Users size={20} />, text: "Mentor Selection", path: "/mentor" },
+    { icon: <Users size={20} />, text: "Mentor Selection", path: "/student/mentor" },
   ];
 
-  const handleLogout = () => {
-    console.log("Logging out...");
+  const handleLogout = async () => {
+    await logout(); // Call the logout function from AuthProvider
+    navigate("/login"); // Redirect to login
   };
 
   const handleStudentProfile = () => {
-    navigate("/StudentProfile");
+    navigate("/student/StudentProfile");
   };
 
   return (

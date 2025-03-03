@@ -1,49 +1,95 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, Briefcase, GraduationCap, UserCog, Users } from 'lucide-react';
+import React, { useState, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../layouts/AuthProvider";
+import {
+  Eye,
+  EyeOff,
+  Briefcase,
+  GraduationCap,
+  UserCog,
+  Users,
+} from "lucide-react";
 
 const InternshipLoginForm = () => {
+  const { login } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedTab, setSelectedTab] = useState('student');
+  const [selectedTab, setSelectedTab] = useState("student");
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    username: "",
+    password: "",
   });
+  const [error, setError] = useState("");
 
   const getUserMessage = () => {
-    switch(selectedTab) {
-      case 'student':
+    switch (selectedTab) {
+      case "student":
         return "Access internship opportunities and track your internship";
-      case 'guide':
+      case "guide":
         return "Monitor and guide students through their internship journey";
-      case 'admin':
+      case "admin":
         return "Manage portal operations and oversee all activities";
       default:
         return "";
     }
   };
 
-  const getEmailPlaceholder = () => {
-    switch(selectedTab) {
-      case 'student':
-        return "student@charusat.edu.in";
-      case 'guide':
-        return "guide@charusat.ac.in";
-      case 'admin':
-        return "admin@charusat.ac.in";
+  const getUsernamePlaceholder = () => {
+    switch (selectedTab) {
+      case "student":
+        return "studentId";
+      case "guide":
+        return "username";
+      case "admin":
+        return "username";
       default:
-        return "email@domain.com";
+        return "username";
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
+
+    // Validate form fields
+    if (!formData.username.trim() || !formData.password.trim()) {
+      setError("All fields are required.");
+      return;
+    }
+
+    // Prepare the payload based on the selected tab
+    const payload = {
+      role: selectedTab,
+      password: formData.password,
+    };
+
+    // Add username or studentId based on the selected role
+    if (selectedTab === "student") {
+      payload.studentId = formData.username;
+    } else {
+      payload.username = formData.username;
+    }
+
+    try {
+      const result = await login(payload);
+
+      if (result.success) {
+        // The navigation will be handled by the protected routes
+        // But you can force a redirect if needed:
+        navigate(`/${result.data.user.role}`);
+        console.log("Login successful");
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      console.error("Error during login:", error.message);
+      alert(error.message || "Login failed. Please try again.");
+    }
   };
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -59,10 +105,14 @@ const InternshipLoginForm = () => {
 
         {/* Header */}
         <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Internship Portal</h1>
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+            Internship Portal
+          </h1>
           <p className="text-gray-600">
             Welcome to your internship management system
-            <span className="text-blue-600 block mt-1">Connect. Learn. Grow.</span>
+            <span className="text-blue-600 block mt-1">
+              Connect. Learn. Grow.
+            </span>
           </p>
         </div>
 
@@ -70,33 +120,36 @@ const InternshipLoginForm = () => {
         <div className="bg-gray-50 rounded-xl p-1.5">
           <div className="flex rounded-lg bg-white shadow-sm p-1">
             <button
-              onClick={() => setSelectedTab('student')}
+              type="button"
+              onClick={() => setSelectedTab("student")}
               className={`flex-1 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                selectedTab === 'student'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-50'
+                selectedTab === "student"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-gray-600 hover:bg-gray-50"
               }`}
             >
               <GraduationCap className="h-4 w-4" />
               Student
             </button>
             <button
-              onClick={() => setSelectedTab('guide')}
+              type="button"
+              onClick={() => setSelectedTab("guide")}
               className={`flex-1 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                selectedTab === 'guide'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-50'
+                selectedTab === "guide"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-gray-600 hover:bg-gray-50"
               }`}
             >
               <Users className="h-4 w-4" />
               Guide
             </button>
             <button
-              onClick={() => setSelectedTab('admin')}
+              type="button"
+              onClick={() => setSelectedTab("admin")}
               className={`flex-1 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                selectedTab === 'admin'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-50'
+                selectedTab === "admin"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-gray-600 hover:bg-gray-50"
               }`}
             >
               <UserCog className="h-4 w-4" />
@@ -109,17 +162,17 @@ const InternshipLoginForm = () => {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
-              Email Address <span className="text-red-500">*</span>
+              {selectedTab === "student" ? "Student ID" : "Username"}{" "}
+              <span className="text-red-500">*</span>
             </label>
             <input
-              type="email"
-              name="email"
+              name="username"
               required
-              placeholder={getEmailPlaceholder()}
+              placeholder={getUsernamePlaceholder()}
               className="w-full px-4 py-3 bg-gray-50 rounded-lg border border-gray-200
                        focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 
                        transition-all duration-200"
-              value={formData.email}
+              value={formData.username}
               onChange={handleChange}
             />
           </div>
@@ -130,7 +183,7 @@ const InternshipLoginForm = () => {
             </label>
             <div className="relative group">
               <input
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? "text" : "password"}
                 name="password"
                 required
                 placeholder="••••••••"
@@ -143,8 +196,9 @@ const InternshipLoginForm = () => {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 
-                         hover:text-gray-600 transition-colors duration-200"
+           hover:text-gray-600 transition-colors duration-200"
               >
                 {showPassword ? (
                   <EyeOff className="h-5 w-5" />
@@ -154,17 +208,10 @@ const InternshipLoginForm = () => {
               </button>
             </div>
             <div className="flex items-center justify-between pt-1">
-              {/* <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="remember"
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label htmlFor="remember" className="ml-2 text-sm text-gray-600">
-                  Keep me signed in
-                </label>
-              </div> */}
-              <a href="\PasswordResetPage" className="text-sm text-blue-600 hover:text-blue-700 hover:underline">
+              <a
+                href="/PasswordResetPage"
+                className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+              >
                 Reset password
               </a>
             </div>
@@ -181,15 +228,14 @@ const InternshipLoginForm = () => {
           </button>
         </form>
 
+        {error && (
+          <div className="text-red-500 text-sm text-center bg-red-100 border border-red-300 rounded-lg p-2">
+            {error}
+          </div>
+        )}
+
         {/* Footer */}
         <div className="space-y-4">
-          {/* <p className="text-center text-sm text-gray-500">
-            New to the platform?{' '}
-            <a href="#" className="text-blue-600 hover:text-blue-700 hover:underline font-medium">
-              Create an account
-            </a>
-          </p> */}
-          
           <div className="text-xs text-center text-gray-500">
             {getUserMessage()}
           </div>

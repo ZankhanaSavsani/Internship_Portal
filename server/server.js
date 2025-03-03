@@ -13,6 +13,14 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
+// Enable CORS for all routes
+app.use(cors({
+  origin: 'http://localhost:3000', // Allow requests from this origin
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allowed HTTP methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
+  credentials: true, // Allow credentials (e.g., cookies)
+}));
+
 // Import Routes
 const authRoutes = require("./routes/authRoutes");
 const studentRoutes = require("./routes/studentRoutes");
