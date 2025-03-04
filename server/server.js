@@ -13,6 +13,8 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
+app.set('trust proxy', true);
+
 // Enable CORS for all routes
 app.use(cors({
   origin: 'http://localhost:3000', // Allow requests from this origin

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../../layouts/AuthProvider";
 import {
   Card,
   CardContent,
@@ -19,30 +20,52 @@ import {
   Users,
   Code,
   Briefcase,
+  CheckCircle,
+  AlertCircle,
+  Lock,
 } from "lucide-react";
+import axios from "axios";
 
 const CompanyApprovalForm = () => {
+  const { user, isAuthenticated, loading } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState(null);
+  const [submitMessage, setSubmitMessage] = useState("");
   const [formData, setFormData] = useState({
-    studentName: "",
+    studentName: user?.name || "",
     companyName: "",
     companyWebsite: "",
     companyAddress: "",
     employeeCount: "",
     branches: [{ location: "" }],
     headOfficeAddress: "",
-    stipendAmount: "",
-    hrName: "",
-    hrPhone: "",
-    hrEmail: "",
-    technologies: [""],
+    stipendAmount: "0", // Changed to string with default value
+    hrDetails: {
+      name: "",
+      phone: "",
+      email: "",
+    },
+    technologies: [""], // Changed from 'technology' to match frontend naming
     currentProject: "",
     clients: [""],
     companySource: "",
     reasonForChoice: "",
+    approvalStatus: "pending", // Changed to match backend 'approvalStatus'
   });
 
+  // Update student name when user is loaded
+  useEffect(() => {
+    if (user?.name && !formData.studentName) {
+      setFormData((prev) => ({
+        ...prev,
+        studentName: user.name,
+      }));
+    }
+  }, [user]);
+
   const validateURL = (url) => {
+    if (!url) return false;
     try {
       new URL(url);
       return true;
@@ -57,6 +80,7 @@ const CompanyApprovalForm = () => {
   };
 
   const validatePhone = (phone) => {
+    // Match the server-side validation pattern
     const phoneRegex = /^\+?[\d\s-]{10,}$/;
     return phoneRegex.test(phone);
   };
@@ -83,10 +107,25 @@ const CompanyApprovalForm = () => {
   ];
 
   const handleChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    if (field.startsWith("hrDetails.")) {
+      // Handle nested hrDetails fields
+      const [parent, child] = field.split(".");
+      setFormData((prev) => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value,
+        },
+      }));
+    } else {
+      // Handle top-level fields
+      setFormData((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+    }
+
+    // Clear errors for the field
     if (errors[field]) {
       setErrors((prev) => ({
         ...prev,
@@ -129,8 +168,7 @@ const CompanyApprovalForm = () => {
         }
 
         if (!formData.companyWebsite || !validateURL(formData.companyWebsite)) {
-          newErrors.companyWebsite =
-            "Valid company website URL is required";
+          newErrors.companyWebsite = "Valid company website URL is required";
         }
 
         if (!formData.companyAddress.trim()) {
@@ -148,28 +186,28 @@ const CompanyApprovalForm = () => {
         break;
 
       case 2:
-        if (!formData.stipendAmount) {
-          newErrors.stipendAmount = "Stipend amount is required";
-        } else if (formData.stipendAmount < 0) {
+        // Convert stipendAmount to number for comparison
+        const stipendAmount = parseFloat(formData.stipendAmount);
+        if (isNaN(stipendAmount)) {
+          newErrors.stipendAmount = "Stipend amount must be a number";
+        } else if (stipendAmount < 0) {
           newErrors.stipendAmount = "Stipend amount cannot be negative";
         }
 
-        if (!formData.hrName.trim()) {
-          newErrors.hrName = "HR name is required";
-        } else if (formData.hrName.length < 2) {
-          newErrors.hrName = "HR name must be at least 2 characters long";
+        if (!formData.hrDetails.name.trim()) {
+          newErrors["hrDetails.name"] = "HR name is required";
         }
 
-        if (!formData.hrPhone) {
-          newErrors.hrPhone = "HR phone is required";
-        } else if (!validatePhone(formData.hrPhone)) {
-          newErrors.hrPhone = "Please enter a valid phone number";
+        if (!formData.hrDetails.phone) {
+          newErrors["hrDetails.phone"] = "HR phone is required";
+        } else if (!validatePhone(formData.hrDetails.phone)) {
+          newErrors["hrDetails.phone"] = "Please enter a valid phone number with at least 10 digits";
         }
 
-        if (!formData.hrEmail) {
-          newErrors.hrEmail = "HR email is required";
-        } else if (!validateEmail(formData.hrEmail)) {
-          newErrors.hrEmail = "Please enter a valid email address";
+        if (!formData.hrDetails.email) {
+          newErrors["hrDetails.email"] = "HR email is required";
+        } else if (!validateEmail(formData.hrDetails.email)) {
+          newErrors["hrDetails.email"] = "Please enter a valid email address";
         }
 
         if (formData.branches.some((branch) => !branch.location.trim())) {
@@ -182,7 +220,7 @@ const CompanyApprovalForm = () => {
         break;
 
       case 3:
-        if (!formData.technologies[0]) {
+        if (formData.technologies.length === 0 || !formData.technologies[0]) {
           newErrors.technologies = "At least one technology is required";
         } else if (formData.technologies.some((tech) => !tech.trim())) {
           newErrors.technologies = "All technology fields must be filled";
@@ -223,13 +261,88 @@ const CompanyApprovalForm = () => {
 
   const handlePrevious = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
+    // Clear submission status when going back
+    setSubmitStatus(null);
+    setSubmitMessage("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validateStep(currentStep)) {
-      console.log("Form submitted:", formData);
+  
+    if (!isAuthenticated) {
+      setSubmitStatus("error");
+      setSubmitMessage("You must be logged in to submit this form.");
+      return;
     }
+  
+    if (validateStep(currentStep)) {
+      setIsSubmitting(true);
+      try {
+        // Prepare data for backend format
+        const submissionData = {
+          ...formData,
+          student: user._id, // Include student ID from authenticated user
+          stipendAmount: parseFloat(formData.stipendAmount), // Convert to number for backend
+          approvalStatus: "Pending", // Match backend naming
+        };
+        
+        const response = await axios.post(
+          "/api/company-approvals",
+          submissionData,
+          { withCredentials: true }
+        );
+  
+        setSubmitStatus("success");
+        setSubmitMessage(response.data.message || "Form submitted successfully!");
+        console.log("Form submitted successfully:", response.data);
+  
+        // Reset form after successful submission
+        setFormData({
+          studentName: user?.name || "",
+          companyName: "",
+          companyWebsite: "",
+          companyAddress: "",
+          employeeCount: "",
+          branches: [{ location: "" }],
+          headOfficeAddress: "",
+          stipendAmount: "0",
+          hrDetails: {
+            name: "",
+            phone: "",
+            email: "",
+          },
+          technologies: [""],
+          currentProject: "",
+          clients: [""],
+          companySource: "",
+          reasonForChoice: "",
+          approvalStatus: "pending",
+        });
+        setCurrentStep(1); // Reset to the first step
+      } catch (error) {
+        setSubmitStatus("error");
+        
+        // Handle detailed validation errors from backend
+        if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+          const backendErrors = {};
+          error.response.data.errors.forEach(err => {
+            backendErrors[err.field] = err.message;
+          });
+          setErrors(backendErrors);
+        } else {
+          setSubmitMessage(error.response?.data?.message || "An error occurred. Please try again.");
+        }
+        
+        console.error("Error details:", error.response?.data);
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
+
+  const handleLogin = () => {
+    // Redirect to login page
+    window.location.href = "/login";
   };
 
   const renderStepIndicator = () => (
@@ -255,8 +368,12 @@ const CompanyApprovalForm = () => {
               </span>
             </div>
             {index < steps.length - 1 && (
-              <div className="h-1 flex-1 mx-4 bg-gray-200"
-                style={{ backgroundColor: currentStep > step.number ? "#22c55e" : "#e5e7eb" }}
+              <div
+                className="h-1 flex-1 mx-4 bg-gray-200"
+                style={{
+                  backgroundColor:
+                    currentStep > step.number ? "#22c55e" : "#e5e7eb",
+                }}
               />
             )}
           </div>
@@ -264,9 +381,52 @@ const CompanyApprovalForm = () => {
       </div>
     </div>
   );
-  
+
+  // Authentication notice component
+  const renderAuthNotice = () => (
+    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+      <div className="flex items-center">
+        <Lock className="text-amber-500 mr-2 w-5 h-5" />
+        <div>
+          <h3 className="font-medium text-amber-800">
+            Authentication Required
+          </h3>
+          <p className="text-sm text-amber-700">
+            You must be logged in to submit this form.
+          </p>
+        </div>
+      </div>
+      <Button
+        onClick={handleLogin}
+        className="mt-2 bg-amber-600 hover:bg-amber-700 text-white"
+      >
+        Go to Login
+      </Button>
+    </div>
+  );
+
+  // If auth is still loading, show a loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <Card className="w-full max-w-md p-6 text-center">
+          <CardHeader>
+            <CardTitle>Loading...</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center my-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
+            </div>
+            <p>Verifying your authentication status...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const renderBasicInfo = () => (
     <div className="space-y-6">
+      {!isAuthenticated && renderAuthNotice()}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="space-y-4">
           <div>
@@ -359,6 +519,7 @@ const CompanyApprovalForm = () => {
 
   const renderHRLocation = () => (
     <div className="space-y-6">
+      {!isAuthenticated && renderAuthNotice()}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="space-y-4">
           <div className="space-y-2">
@@ -436,6 +597,7 @@ const CompanyApprovalForm = () => {
               className={errors.stipendAmount ? "border-red-500" : ""}
               placeholder="Enter stipend amount"
               min="0"
+              step="0.01"
             />
             {errors.stipendAmount && (
               <p className="text-red-500 text-sm mt-1">
@@ -450,34 +612,40 @@ const CompanyApprovalForm = () => {
             </label>
             <Input
               placeholder="HR Name *"
-              value={formData.hrName}
-              onChange={(e) => handleChange("hrName", e.target.value)}
-              className={errors.hrName ? "border-red-500" : ""}
+              value={formData.hrDetails.name}
+              onChange={(e) => handleChange("hrDetails.name", e.target.value)}
+              className={errors["hrDetails.name"] ? "border-red-500" : ""}
             />
-            {errors.hrName && (
-              <p className="text-red-500 text-sm mt-1">{errors.hrName}</p>
+            {errors["hrDetails.name"] && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors["hrDetails.name"]}
+              </p>
             )}
 
             <Input
-              placeholder="HR Phone *"
+              placeholder="HR Phone * (min 10 digits, can include +, spaces, or hyphens)"
               type="tel"
-              value={formData.hrPhone}
-              onChange={(e) => handleChange("hrPhone", e.target.value)}
-              className={errors.hrPhone ? "border-red-500" : ""}
+              value={formData.hrDetails.phone}
+              onChange={(e) => handleChange("hrDetails.phone", e.target.value)}
+              className={errors["hrDetails.phone"] ? "border-red-500" : ""}
             />
-            {errors.hrPhone && (
-              <p className="text-red-500 text-sm mt-1">{errors.hrPhone}</p>
+            {errors["hrDetails.phone"] && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors["hrDetails.phone"]}
+              </p>
             )}
 
             <Input
               placeholder="HR Email *"
               type="email"
-              value={formData.hrEmail}
-              onChange={(e) => handleChange("hrEmail", e.target.value)}
-              className={errors.hrEmail ? "border-red-500" : ""}
+              value={formData.hrDetails.email}
+              onChange={(e) => handleChange("hrDetails.email", e.target.value)}
+              className={errors["hrDetails.email"] ? "border-red-500" : ""}
             />
-            {errors.hrEmail && (
-              <p className="text-red-500 text-sm mt-1">{errors.hrEmail}</p>
+            {errors["hrDetails.email"] && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors["hrDetails.email"]}
+              </p>
             )}
           </div>
         </div>
@@ -487,6 +655,7 @@ const CompanyApprovalForm = () => {
 
   const renderTechnicalDetails = () => (
     <div className="space-y-6">
+      {!isAuthenticated && renderAuthNotice()}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="space-y-4">
           <div className="space-y-2">
@@ -556,6 +725,7 @@ const CompanyApprovalForm = () => {
 
   const renderAdditionalInfo = () => (
     <div className="space-y-6">
+      {!isAuthenticated && renderAuthNotice()}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="space-y-4">
           <div className="space-y-2">
@@ -633,57 +803,133 @@ const CompanyApprovalForm = () => {
           </div>
         </div>
       </div>
+
+      {/* Submission status message */}
+      {submitStatus && (
+        <div
+          className={`p-4 rounded-lg ${
+            submitStatus === "success"
+              ? "bg-green-100 border border-green-200"
+              : "bg-red-100 border border-red-200"
+          }`}
+        >
+          <div className="flex items-center">
+            {submitStatus === "success" ? (
+              <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
+            )}
+            <p
+              className={`text-sm ${
+                submitStatus === "success" ? "text-green-700" : "text-red-700"
+              }`}
+            >
+              {submitMessage}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <Card className="w-full max-w-md p-6 text-center">
+          <CardHeader>
+            <CardTitle>Authentication Required</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600 mb-4">
+              You must be logged in to access this page.
+            </p>
+            <Button
+              onClick={handleLogin}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Go to Login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-    <Card className="w-full max-w-4xl mx-auto bg-gray-50 overflow-y-auto max-h-[90vh]">
-      <CardHeader className="border-b bg-white sticky top-0 z-10">
-        <CardTitle className="text-2xl font-bold text-gray-800">
-          Company Approval Form
-        </CardTitle>
-      </CardHeader>
+      {/* Loading Spinner */}
+      {isSubmitting && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <p className="text-lg font-semibold">Submitting...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700 mt-4"></div>
+          </div>
+        </div>
+      )}
+      <Card className="w-full max-w-4xl mx-auto bg-gray-50 overflow-y-auto max-h-[90vh]">
+        <CardHeader className="border-b bg-white sticky top-0 z-10">
+          <CardTitle className="text-2xl font-bold text-gray-800">
+            Company Approval Form
+          </CardTitle>
+        </CardHeader>
 
-      <CardContent className="items-center pt-6 overflow-y-auto">
-        {renderStepIndicator()}
-        <form onSubmit={handleSubmit}>
-          {currentStep === 1 && renderBasicInfo()}
-          {currentStep === 2 && renderHRLocation()}
-          {currentStep === 3 && renderTechnicalDetails()}
-          {currentStep === 4 && renderAdditionalInfo()}
-        </form>
-      </CardContent>
+        <CardContent className="items-center pt-6 overflow-y-auto">
+          {renderStepIndicator()}
 
-      <CardFooter className="flex justify-between border-t bg-white sticky bottom-0 z-10 mt-6 p-6">
-        <Button
-          variant="outline"
-          onClick={handlePrevious}
-          disabled={currentStep === 1}
-          className="text-gray-600 hover:bg-gray-100"
-        >
-          <ChevronLeft className="w-4 h-4 mr-2" />
-          Previous
-        </Button>
+          {/* Success Message */}
+          {submitStatus === "success" && (
+            <div className="bg-green-100 border border-green-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center">
+                <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+                <p className="text-sm text-green-700">{submitMessage}</p>
+              </div>
+            </div>
+          )}
 
-        {currentStep < 4 ? (
+          <form onSubmit={handleSubmit}>
+            {currentStep === 1 && renderBasicInfo()}
+            {currentStep === 2 && renderHRLocation()}
+            {currentStep === 3 && renderTechnicalDetails()}
+            {currentStep === 4 && renderAdditionalInfo()}
+          </form>
+        </CardContent>
+
+        <CardFooter className="flex justify-between border-t bg-white sticky bottom-0 z-10 mt-6 p-6">
           <Button
-            onClick={handleNext}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            variant="outline"
+            onClick={handlePrevious}
+            disabled={currentStep === 1}
+            className="text-gray-600 hover:bg-gray-100"
           >
-            Next
-            <ChevronRight className="w-4 h-4 ml-2" />
+            <ChevronLeft className="w-4 h-4 mr-2" />
+            Previous
           </Button>
-        ) : (
-          <Button
-            onClick={handleSubmit}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            Submit for Approval
-            <Save className="w-4 h-4 ml-2" />
-          </Button>
-        )}
-      </CardFooter>
-    </Card>
+
+          {currentStep < 4 ? (
+            <Button
+              onClick={handleNext}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-2" />
+            </Button>
+          ) : (
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting || !isAuthenticated}
+              className={`${
+                !isAuthenticated
+                  ? "bg-gray-400"
+                  : "bg-green-600 hover:bg-green-700"
+              } text-white`}
+            >
+              {isSubmitting ? "Submitting..." : "Submit for Approval"}
+              <Save className="w-4 h-4 ml-2" />
+            </Button>
+          )}
+        </CardFooter>
+      </Card>
     </div>
   );
 };

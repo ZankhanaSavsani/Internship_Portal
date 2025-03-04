@@ -1,5 +1,5 @@
-import React, { useState, useContext } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useContext, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { AuthContext } from "../layouts/AuthProvider";
 import {
   Eye,
@@ -8,11 +8,13 @@ import {
   GraduationCap,
   UserCog,
   Users,
+  Loader2,
 } from "lucide-react";
 
 const InternshipLoginForm = () => {
-  const { login } = useContext(AuthContext);
+  const { login, isAuthenticated, user, loading: authLoading } = useContext(AuthContext);
   const navigate = useNavigate();
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [selectedTab, setSelectedTab] = useState("student");
   const [formData, setFormData] = useState({
@@ -20,6 +22,16 @@ const InternshipLoginForm = () => {
     password: "",
   });
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      // Redirect to the appropriate dashboard based on role
+      const redirectPath = location.state?.from || `/${user.role}`;
+      navigate(redirectPath);
+    }
+  }, [isAuthenticated, user, navigate, location]);
 
   const getUserMessage = () => {
     switch (selectedTab) {
@@ -49,10 +61,13 @@ const InternshipLoginForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setIsSubmitting(true);
 
     // Validate form fields
     if (!formData.username.trim() || !formData.password.trim()) {
       setError("All fields are required.");
+      setIsSubmitting(false);
       return;
     }
 
@@ -73,16 +88,16 @@ const InternshipLoginForm = () => {
       const result = await login(payload);
 
       if (result.success) {
-        // The navigation will be handled by the protected routes
-        // But you can force a redirect if needed:
-        navigate(`/${result.data.user.role}`);
+        // The redirection happens in the useEffect hook
         console.log("Login successful");
       } else {
-        throw new Error(result.message);
+        setError(result.message || "Invalid credentials. Please try again.");
       }
     } catch (error) {
-      console.error("Error during login:", error.message);
-      alert(error.message || "Login failed. Please try again.");
+      console.error("Error during login:", error);
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -91,7 +106,20 @@ const InternshipLoginForm = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
+    // Clear error when user types
+    if (error) setError("");
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="p-8 text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-700">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
@@ -198,7 +226,7 @@ const InternshipLoginForm = () => {
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 
-           hover:text-gray-600 transition-colors duration-200"
+                   hover:text-gray-600 transition-colors duration-200"
               >
                 {showPassword ? (
                   <EyeOff className="h-5 w-5" />
@@ -219,12 +247,21 @@ const InternshipLoginForm = () => {
 
           <button
             type="submit"
+            disabled={isSubmitting}
             className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white 
                      font-semibold rounded-lg shadow-md hover:from-blue-700 hover:to-indigo-700 
                      focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 
-                     transform transition-all duration-200 hover:scale-[1.02] flex items-center justify-center gap-2"
+                     transform transition-all duration-200 hover:scale-[1.02] flex items-center justify-center gap-2
+                     disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            <span>Sign in to Portal</span>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Signing in...</span>
+              </>
+            ) : (
+              <span>Sign in to Portal</span>
+            )}
           </button>
         </form>
 

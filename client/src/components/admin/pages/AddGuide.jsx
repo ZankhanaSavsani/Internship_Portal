@@ -1,37 +1,52 @@
-import React, { useState } from 'react';
-import { UserPlus, ArrowLeft } from 'lucide-react';
+import React, { useState } from "react";
+import { UserPlus, ArrowLeft } from "lucide-react";
 
-const AddGuidePage = () => {
+const AddGuide = () => {
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    department: '',
-    maxStudents: ''
+    username: "",
+    guideName: "",
+    email: "",
+    password: "",
   });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prevState => ({
+    setFormData((prevState) => ({
       ...prevState,
-      [name]: value
+      [name]: value,
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    // Add your API call here
+    try {
+      const response = await fetch("http://localhost:5000/api/guide", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        alert("Guide added successfully!");
+        console.log("Guide added:", data);
+      } else {
+        alert("Error adding guide: " + (data.message || "Please check your input."));
+      }
+    } catch (error) {
+      console.error("Error adding guide:", error);
+      alert("Error adding guide. Please try again.");
+    }
   };
 
   return (
-    <div className="p-8">
+    <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-8 flex items-center">
-          <button 
-            onClick={() => window.history.back()} 
+          <button
+            onClick={() => window.history.back()}
             className="flex items-center text-gray-600 hover:text-gray-800"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
@@ -55,12 +70,12 @@ const AddGuidePage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name
+                  Username
                 </label>
                 <input
                   type="text"
-                  name="firstName"
-                  value={formData.firstName}
+                  name="username"
+                  value={formData.username}
                   onChange={handleChange}
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
@@ -68,12 +83,12 @@ const AddGuidePage = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name
+                  Guide Name
                 </label>
                 <input
                   type="text"
-                  name="lastName"
-                  value={formData.lastName}
+                  name="guideName"
+                  value={formData.guideName}
                   onChange={handleChange}
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
@@ -98,53 +113,15 @@ const AddGuidePage = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone Number
+                  Password
                 </label>
                 <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
+                  type="password"
+                  name="password"
+                  value={formData.password}
                   onChange={handleChange}
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
-                />
-              </div>
-            </div>
-
-            {/* Professional Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Department
-                </label>
-                <select
-                  name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                >
-                  <option value="">Select Department</option>
-                  <option value="computer">Computer Engineering</option>
-                  <option value="mechanical">Mechanical Engineering</option>
-                  <option value="electrical">Electrical Engineering</option>
-                  <option value="civil">Civil Engineering</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Maximum Students
-                </label>
-                <input
-                  type="number"
-                  name="maxStudents"
-                  value={formData.maxStudents}
-                  onChange={handleChange}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                  min="1"
-                  max="10"
-                  placeholder="Maximum number of students to guide"
                 />
               </div>
             </div>
@@ -172,4 +149,4 @@ const AddGuidePage = () => {
   );
 };
 
-export default AddGuidePage;
+export default AddGuide;

@@ -54,17 +54,17 @@ const NavLayout = ({ children }) => {
     {
       icon: <Users size={20} />,
       text: "Manage Students",
-      path: "/admin/students",
+      path: "/admin/StudentManagementPages",
     },
     {
       icon: <UserCog size={20} />,
       text: "Manage Guides",
-      path: "/admin/guides",
+      path: "/admin/GuideManagementPages",
     },
     {
       icon: <Shield size={20} />,
       text: "Manage Admins",
-      path: "/admin/admins",
+      path: "/admin/AdminManagementPages",
     },
   ];
 
