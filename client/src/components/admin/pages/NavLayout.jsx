@@ -24,11 +24,13 @@ import {
 } from "../../ui/dropdown-menu";
 import { Button } from "../../ui/button";
 import { Badge } from "../../ui/badge";
+import { useAuth } from "../../layouts/AuthProvider";
 
 const NavLayout = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(3);
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const navItems = [
     {
@@ -68,8 +70,9 @@ const NavLayout = ({ children }) => {
     },
   ];
 
-  const handleLogout = () => {
-    console.log("Logging out...");
+  const handleLogout = async () => {
+    await logout(); // Call the logout function from AuthProvider
+    navigate("/login"); // Redirect to login
   };
 
   const handleStudentProfile = () => {
