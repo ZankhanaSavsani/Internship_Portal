@@ -1,13 +1,33 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import Cookies from 'js-cookie';  // You'll need to install this package: npm install js-cookie
 
 // Create Auth Context
 export const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("user")) || null);
+  const [user, setUser] = useState(() => {
+    try {
+      const userCookie = Cookies.get('user');
+      return userCookie ? JSON.parse(userCookie) : null;
+    } catch (error) {
+      console.error("Error parsing user cookie:", error);
+      return null;
+    }
+  });
+  
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    try {
+      const authCookie = Cookies.get('isAuthenticated');
+      return authCookie ? JSON.parse(authCookie) : false;
+    } catch (error) {
+      console.error("Error parsing isAuthenticated cookie:", error);
+      return false;
+    }
+  });
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -15,16 +35,13 @@ export const AuthProvider = ({ children }) => {
   // Function to check authentication status
   useEffect(() => {
     const checkAuthStatus = async () => {
-      if (user) {
-        setLoading(false);
-        return;
-      }
-
       try {
         const response = await axios.get("/api/auth/me", { withCredentials: true });
         if (response.data.success) {
           setUser(response.data.user);
-          localStorage.setItem("user", JSON.stringify(response.data.user));
+          setIsAuthenticated(true);
+          Cookies.set('user', JSON.stringify(response.data.user), { expires: 7 }); // Expires in 7 days
+          Cookies.set('isAuthenticated', JSON.stringify(true), { expires: 7 });
         } else {
           logout();
         }
@@ -53,7 +70,9 @@ export const AuthProvider = ({ children }) => {
       const response = await axios.post("/api/auth/login", credentials, { withCredentials: true });
       if (response.data.success) {
         setUser(response.data.user);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
+        setIsAuthenticated(true);
+        Cookies.set('user', JSON.stringify(response.data.user), { expires: 7 });
+        Cookies.set('isAuthenticated', JSON.stringify(true), { expires: 7 });
         setError(null);
         return { success: true, data: response.data };
       } else {
@@ -76,18 +95,25 @@ export const AuthProvider = ({ children }) => {
       console.error("Logout failed:", err);
     } finally {
       setUser(null);
-      localStorage.removeItem("user");
+      setIsAuthenticated(false);
+      Cookies.remove('user');
+      Cookies.remove('isAuthenticated');
       navigate("/login");
     }
   };
 
   // Refresh token function
-  const refreshToken = async () => {
+  const refreshToken = async (retries = 3) => {
     try {
       const response = await axios.post("/api/auth/refresh-token", {}, { withCredentials: true });
       return response.data.success;
     } catch (err) {
       console.error("Token refresh failed:", err);
+      if (retries > 0) {
+        console.log(`Retrying token refresh (${retries} attempts left)...`);
+        await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds before retrying
+        return refreshToken(retries - 1);
+      }
       return false;
     }
   };
@@ -113,10 +139,10 @@ export const AuthProvider = ({ children }) => {
           return Promise.reject(error);
         }
       );
-
+  
       return () => axios.interceptors.response.eject(interceptor);
     };
-
+  
     setupInterceptors();
   }, []);
 
@@ -124,12 +150,12 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
+        isAuthenticated,
         loading,
         error,
         login,
         logout,
         refreshToken,
-        isAuthenticated: !!user,
         isAdmin: user?.role === "admin",
         isGuide: user?.role === "guide",
         isStudent: user?.role === "student",

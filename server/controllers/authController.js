@@ -29,7 +29,7 @@ const createCookieOptions = (maxAge) => {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.ALLOW_CROSS_SITE === 'true' ? "lax" : "strict",
+    sameSite: "lax",
     maxAge,
     domain: process.env.COOKIE_DOMAIN || undefined
   };
@@ -79,11 +79,11 @@ const setAuthCookies = (res, accessToken, refreshToken) => {
 const setRoleSpecificCookies = (res, user, role) => {
   const roleHandlers = {
     student: (user, options) => {
-      if (user.studentId && user.studentName) {
-        res.cookie("studentId", user.studentId, options);
+      if (user._id && user.studentName) {
+        res.cookie("userId", user._id, options); // Set userId cookie
         res.cookie("studentName", user.studentName, options);
         logger.debug('[STUDENT COOKIES SET]', {
-          hasStudentId: !!user.studentId,
+          hasUserId: !!user._id,
           hasStudentName: !!user.studentName
         });
       }
@@ -190,7 +190,7 @@ exports.login = [
         success: true,
         message: "Login successful",
         user: {
-          id: user._id,
+          id: user._id, // Include _id in the response
           role: user.role,
           [role.toLowerCase() === 'student' ? 'studentId' : 'username']: role.toLowerCase() === 'student' ? user.studentId : user.username,
           lastLogin: user.lastLogin
@@ -384,6 +384,66 @@ exports.logout = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "An error occurred during logout"
+    });
+  }
+};
+
+// Backend: Fetch user by _id
+exports.getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find user by _id
+    const user = await UserModel.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(500).json({ success: false, message: "An error occurred while fetching user data" });
+  }
+};
+
+/**
+ * @desc    Get current authenticated user
+ * @route   GET /api/auth/me
+ * @access  Private
+ */
+exports.getMe = async (req, res) => {
+  try {
+    const userId = req.user.id; // Extracted from the authentication middleware
+    const role = req.user.role.toLowerCase(); // Extract role from token payload
+
+    // Ensure a valid role is provided
+    const UserModel = ROLE_MODEL_MAP[role];
+    if (!UserModel) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user role"
+      });
+    }
+
+    // Fetch user details (excluding password)
+    const user = await UserModel.findById(userId).select('-password');
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    return res.json({
+      success: true,
+      user
+    });
+
+  } catch (error) {
+    logger.error('[GET ME ERROR]', { error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while fetching user details"
     });
   }
 };

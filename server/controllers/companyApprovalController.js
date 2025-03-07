@@ -1,10 +1,16 @@
 const logger = require("../utils/logger");
 const CompanyApprovalDetails = require("../models/CompanyApprovalFormModel");
+// const StudentModel = require("../models/StudentModel"); 
 
 // @desc   Get a single company approval by ID (excluding soft-deleted records)
 // @route  GET /api/company-approvals/:id
 exports.getCompanyApprovalById = async (req, res, next) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      logger.error(`[GET /api/company-approvals/${req.params.id}] Invalid ID`);
+      return res.status(400).json({ success: false, message: "Invalid ID" });
+    }
+
     const approval = await CompanyApprovalDetails.findOne({
       _id: req.params.id,
       isDeleted: false,
@@ -27,7 +33,7 @@ exports.getCompanyApprovalById = async (req, res, next) => {
 exports.getAllCompanyApprovals = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = Math.min(parseInt(req.query.limit) || 10, 100); // Add a max limit
     const skip = (page - 1) * limit;
 
     // Dynamic sorting
@@ -43,8 +49,8 @@ exports.getAllCompanyApprovals = async (req, res, next) => {
     if (req.query.studentName) {
       filterOptions.studentName = { $regex: req.query.studentName, $options: "i" };
     }
-    if (req.query.status !== undefined) {
-      filterOptions.status = req.query.status === "true"; // Convert to boolean
+    if (req.query.status) {
+      filterOptions.approvalStatus = req.query.status; // Use approvalStatus directly
     }
 
     const approvals = await CompanyApprovalDetails.find(filterOptions)
@@ -70,9 +76,26 @@ exports.getAllCompanyApprovals = async (req, res, next) => {
 
 // @desc   Create a new company approval request
 // @route  POST /api/company-approvals
+
 exports.createCompanyApproval = async (req, res, next) => {
   try {
-    const newApproval = await CompanyApprovalDetails.create(req.body);
+    const student = req.user.id;
+    const {studentName} = req.body;
+
+    if (!student || !studentName) {
+      logger.error("[POST /api/company-approvals] Invalid user!!");
+      return res.status(400).json({ success: false, message: "Invalid user!!" });
+    }
+
+    // Add student and studentName to the request body
+    const approvalData = {
+      ...req.body,
+      studentId: student, // Use _id as the student reference
+      studentName: studentName, // Use the student's name from the user data
+    };
+
+    // Create the new approval
+    const newApproval = await CompanyApprovalDetails.create(approvalData);
     logger.info(`[POST /api/company-approvals] Created ID: ${newApproval._id}`);
 
     res.status(201).json({ success: true, data: newApproval });

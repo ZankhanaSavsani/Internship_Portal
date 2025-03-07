@@ -33,32 +33,33 @@ const CompanyApprovalForm = () => {
   const [submitStatus, setSubmitStatus] = useState(null);
   const [submitMessage, setSubmitMessage] = useState("");
   const [formData, setFormData] = useState({
+    student: user?._id || "",
     studentName: user?.name || "",
     companyName: "",
     companyWebsite: "",
     companyAddress: "",
-    employeeCount: "",
+    numberOfEmployees: "",
     branches: [{ location: "" }],
     headOfficeAddress: "",
-    stipendAmount: "0", // Changed to string with default value
+    stipendAmount: 0,
     hrDetails: {
       name: "",
       phone: "",
       email: "",
     },
-    technologies: [""], // Changed from 'technology' to match frontend naming
+    technologies: [""],
     currentProject: "",
     clients: [""],
-    companySource: "",
-    reasonForChoice: "",
-    approvalStatus: "pending", // Changed to match backend 'approvalStatus'
+    sourceOfCompany: "",
+    reasonToChoose: "",
+    approvalStatus: "Pending",
   });
 
-  // Update student name when user is loaded
   useEffect(() => {
-    if (user?.name && !formData.studentName) {
+    if (user?._id && user?.name) {
       setFormData((prev) => ({
         ...prev,
+        student: user._id,
         studentName: user.name,
       }));
     }
@@ -69,7 +70,8 @@ const CompanyApprovalForm = () => {
     try {
       new URL(url);
       return true;
-    } catch {
+    } catch (error) {
+      console.error("URL validation error:", error);
       return false;
     }
   };
@@ -80,7 +82,6 @@ const CompanyApprovalForm = () => {
   };
 
   const validatePhone = (phone) => {
-    // Match the server-side validation pattern
     const phoneRegex = /^\+?[\d\s-]{10,}$/;
     return phoneRegex.test(phone);
   };
@@ -108,7 +109,6 @@ const CompanyApprovalForm = () => {
 
   const handleChange = (field, value) => {
     if (field.startsWith("hrDetails.")) {
-      // Handle nested hrDetails fields
       const [parent, child] = field.split(".");
       setFormData((prev) => ({
         ...prev,
@@ -118,14 +118,12 @@ const CompanyApprovalForm = () => {
         },
       }));
     } else {
-      // Handle top-level fields
       setFormData((prev) => ({
         ...prev,
         [field]: value,
       }));
     }
 
-    // Clear errors for the field
     if (errors[field]) {
       setErrors((prev) => ({
         ...prev,
@@ -159,8 +157,6 @@ const CompanyApprovalForm = () => {
       case 1:
         if (!formData.studentName.trim()) {
           newErrors.studentName = "Student name is required";
-        } else if (formData.studentName.length < 2) {
-          newErrors.studentName = "Name must be at least 2 characters long";
         }
 
         if (!formData.companyName.trim()) {
@@ -173,20 +169,18 @@ const CompanyApprovalForm = () => {
 
         if (!formData.companyAddress.trim()) {
           newErrors.companyAddress = "Company address is required";
-        } else if (formData.companyAddress.length < 10) {
-          newErrors.companyAddress = "Please enter a complete address";
         }
 
-        if (!formData.employeeCount) {
-          newErrors.employeeCount = "Number of employees is required";
-        } else if (formData.employeeCount < 1) {
-          newErrors.employeeCount =
+        if (!formData.numberOfEmployees || isNaN(formData.numberOfEmployees)) {
+          newErrors.numberOfEmployees =
+            "Number of employees is required and must be a number";
+        } else if (formData.numberOfEmployees < 1) {
+          newErrors.numberOfEmployees =
             "Number of employees must be greater than 0";
         }
         break;
 
       case 2:
-        // Convert stipendAmount to number for comparison
         const stipendAmount = parseFloat(formData.stipendAmount);
         if (isNaN(stipendAmount)) {
           newErrors.stipendAmount = "Stipend amount must be a number";
@@ -201,7 +195,8 @@ const CompanyApprovalForm = () => {
         if (!formData.hrDetails.phone) {
           newErrors["hrDetails.phone"] = "HR phone is required";
         } else if (!validatePhone(formData.hrDetails.phone)) {
-          newErrors["hrDetails.phone"] = "Please enter a valid phone number with at least 10 digits";
+          newErrors["hrDetails.phone"] =
+            "Please enter a valid phone number with at least 10 digits";
         }
 
         if (!formData.hrDetails.email) {
@@ -228,25 +223,28 @@ const CompanyApprovalForm = () => {
 
         if (!formData.currentProject.trim()) {
           newErrors.currentProject = "Current project is required";
-        } else if (formData.currentProject.length < 5) {
-          newErrors.currentProject =
-            "Please provide more details about the current project";
         }
         break;
 
       case 4:
-        if (!formData.companySource.trim()) {
-          newErrors.companySource = "Source of company is required";
+        if (!formData.sourceOfCompany.trim()) {
+          newErrors.sourceOfCompany = "Source of company is required";
         }
 
-        if (!formData.reasonForChoice.trim()) {
-          newErrors.reasonForChoice = "Reason is required";
+        if (!formData.reasonToChoose.trim()) {
+          newErrors.reasonToChoose = "Reason is required";
         }
 
         if (formData.clients.some((client) => !client.trim())) {
           newErrors.clients = "All client fields must be filled";
         }
         break;
+      default:
+        console.error("Unexpected case value:", step);
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      console.error("Validation errors found:", newErrors);
     }
 
     setErrors(newErrors);
@@ -256,20 +254,60 @@ const CompanyApprovalForm = () => {
   const handleNext = () => {
     if (validateStep(currentStep)) {
       setCurrentStep((prev) => Math.min(prev + 1, 4));
+    } else {
+      console.error(`Step ${currentStep} validation failed`);
     }
   };
 
   const handlePrevious = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
-    // Clear submission status when going back
     setSubmitStatus(null);
     setSubmitMessage("");
+  };
+
+  const getStepForField = (fieldName) => {
+    const step1Fields = [
+      "student",
+      "studentName",
+      "companyName",
+      "companyWebsite",
+      "companyAddress",
+      "numberOfEmployees",
+    ];
+    const step2Fields = [
+      "branches",
+      "headOfficeAddress",
+      "stipendAmount",
+      "hrDetails.name",
+      "hrDetails.phone",
+      "hrDetails.email",
+    ];
+    const step3Fields = ["technologies", "currentProject"];
+
+    if (
+      step1Fields.includes(fieldName) ||
+      (fieldName.startsWith("hrDetails") &&
+        step1Fields.includes(fieldName.split(".")[1]))
+    ) {
+      return 1;
+    } else if (
+      step2Fields.includes(fieldName) ||
+      (fieldName.startsWith("hrDetails") &&
+        step2Fields.includes(fieldName.split(".")[1]))
+    ) {
+      return 2;
+    } else if (step3Fields.includes(fieldName)) {
+      return 3;
+    }
+    console.log(`Field ${fieldName} mapped to step 4 (default)`);
+    return 4;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
   
     if (!isAuthenticated) {
+      console.error("Submit attempt failed: User not authenticated");
       setSubmitStatus("error");
       setSubmitMessage("You must be logged in to submit this form.");
       return;
@@ -278,34 +316,38 @@ const CompanyApprovalForm = () => {
     if (validateStep(currentStep)) {
       setIsSubmitting(true);
       try {
-        // Prepare data for backend format
         const submissionData = {
           ...formData,
-          student: user._id, // Include student ID from authenticated user
-          stipendAmount: parseFloat(formData.stipendAmount), // Convert to number for backend
-          approvalStatus: "Pending", // Match backend naming
+          student: user._id, // Use user._id instead of user.studentId
+          stipendAmount: parseFloat(formData.stipendAmount),
+          approvalStatus: "Pending",
         };
-        
+  
+        console.log("Submission Data:", submissionData);
+  
         const response = await axios.post(
           "/api/company-approvals",
           submissionData,
           { withCredentials: true }
         );
   
+        console.log("Form submission successful:", response.data);
         setSubmitStatus("success");
-        setSubmitMessage(response.data.message || "Form submitted successfully!");
-        console.log("Form submitted successfully:", response.data);
+        setSubmitMessage(
+          response.data.message || "Form submitted successfully!"
+        );
   
-        // Reset form after successful submission
+        // Reset form data
         setFormData({
+          student: user?._id || "",
           studentName: user?.name || "",
           companyName: "",
           companyWebsite: "",
           companyAddress: "",
-          employeeCount: "",
+          numberOfEmployees: "",
           branches: [{ location: "" }],
           headOfficeAddress: "",
-          stipendAmount: "0",
+          stipendAmount: 0,
           hrDetails: {
             name: "",
             phone: "",
@@ -314,34 +356,82 @@ const CompanyApprovalForm = () => {
           technologies: [""],
           currentProject: "",
           clients: [""],
-          companySource: "",
-          reasonForChoice: "",
-          approvalStatus: "pending",
+          sourceOfCompany: "",
+          reasonToChoose: "",
+          approvalStatus: "Pending",
         });
-        setCurrentStep(1); // Reset to the first step
+        setCurrentStep(1);
       } catch (error) {
+        console.error("Form submission error:", error);
         setSubmitStatus("error");
-        
-        // Handle detailed validation errors from backend
-        if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+  
+        // Handle field validation errors
+        if (error.response?.data?.errors) {
           const backendErrors = {};
-          error.response.data.errors.forEach(err => {
+          error.response.data.errors.forEach((err) => {
             backendErrors[err.field] = err.message;
           });
+          console.error("Backend validation errors:", backendErrors);
           setErrors(backendErrors);
-        } else {
-          setSubmitMessage(error.response?.data?.message || "An error occurred. Please try again.");
+  
+          // Scroll to the field with the error
+          const fieldElement = document.querySelector(
+            `[name="${error.response.data.errors[0].field}"]`
+          );
+          if (fieldElement) {
+            const errorField = error.response.data.errors[0].field;
+            const errorStep = getStepForField(errorField);
+            console.log(
+              `Navigating to step ${errorStep} for field ${errorField}`
+            );
+            setCurrentStep(errorStep);
+            setTimeout(() => {
+              fieldElement.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
+              fieldElement.focus();
+            }, 100);
+          } else {
+            console.error(
+              "Could not find field element for scroll:",
+              error.response.data.errors[0].field
+            );
+          }
         }
-        
-        console.error("Error details:", error.response?.data);
+        // Handle authentication errors
+        else if (
+          error.response?.data?.message ===
+          "User ID not found. Please log in again."
+        ) {
+          console.error("Authentication error: Session expired");
+          setSubmitMessage("Your session has expired. Please log in again.");
+          // Force a logout to refresh the session
+          // logout();
+        }
+        // Handle generic errors
+        else {
+          const errorMessage =
+            error.response?.data?.message ||
+            "An error occurred while submitting the form.";
+          console.error("Generic submission error:", errorMessage, error);
+          setSubmitMessage(errorMessage);
+        }
+  
+        console.error("Error response data:", error.response?.data);
+        console.error("Error response status:", error.response?.status);
+        console.error("Error response headers:", error.response?.headers);
       } finally {
         setIsSubmitting(false);
+        console.log("Form submission process completed");
       }
+    } else {
+      console.error("Form validation failed on submission");
     }
   };
 
   const handleLogin = () => {
-    // Redirect to login page
+    console.log("Redirecting to login page");
     window.location.href = "/login";
   };
 
@@ -382,7 +472,6 @@ const CompanyApprovalForm = () => {
     </div>
   );
 
-  // Authentication notice component
   const renderAuthNotice = () => (
     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
       <div className="flex items-center">
@@ -405,8 +494,8 @@ const CompanyApprovalForm = () => {
     </div>
   );
 
-  // If auth is still loading, show a loading state
   if (loading) {
+    console.log("Authentication loading state...");
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <Card className="w-full max-w-md p-6 text-center">
@@ -465,6 +554,7 @@ const CompanyApprovalForm = () => {
             </label>
             <Input
               type="url"
+              name="companyWebsite" // Add a name attribute for the getStepForField function
               value={formData.companyWebsite}
               onChange={(e) => handleChange("companyWebsite", e.target.value)}
               className={errors.companyWebsite ? "border-red-500" : ""}
@@ -500,15 +590,17 @@ const CompanyApprovalForm = () => {
             </label>
             <Input
               type="number"
-              value={formData.employeeCount}
-              onChange={(e) => handleChange("employeeCount", e.target.value)}
-              className={errors.employeeCount ? "border-red-500" : ""}
+              value={formData.numberOfEmployees}
+              onChange={(e) =>
+                handleChange("numberOfEmployees", e.target.value)
+              }
+              className={errors.numberOfEmployees ? "border-red-500" : ""}
               placeholder="Enter number of employees"
               min="1"
             />
-            {errors.employeeCount && (
+            {errors.numberOfEmployees && (
               <p className="text-red-500 text-sm mt-1">
-                {errors.employeeCount}
+                {errors.numberOfEmployees}
               </p>
             )}
           </div>
@@ -538,12 +630,13 @@ const CompanyApprovalForm = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() =>
+                    onClick={() => {
+                      console.log(`Removing branch at index ${index}`);
                       handleChange(
                         "branches",
                         formData.branches.filter((_, i) => i !== index)
-                      )
-                    }
+                      );
+                    }}
                   >
                     <Minus size={16} />
                   </Button>
@@ -555,12 +648,13 @@ const CompanyApprovalForm = () => {
             )}
             <Button
               type="button"
-              onClick={() =>
+              onClick={() => {
+                console.log("Adding new branch");
                 handleChange("branches", [
                   ...formData.branches,
                   { location: "" },
-                ])
-              }
+                ]);
+              }}
               className="w-full"
             >
               <Plus size={16} className="mr-2" /> Add Branch
@@ -676,12 +770,13 @@ const CompanyApprovalForm = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() =>
+                    onClick={() => {
+                      console.log(`Removing technology at index ${index}`);
                       handleChange(
                         "technologies",
                         formData.technologies.filter((_, i) => i !== index)
-                      )
-                    }
+                      );
+                    }}
                   >
                     <Minus size={16} />
                   </Button>
@@ -693,9 +788,10 @@ const CompanyApprovalForm = () => {
             )}
             <Button
               type="button"
-              onClick={() =>
-                handleChange("technologies", [...formData.technologies, ""])
-              }
+              onClick={() => {
+                console.log("Adding new technology");
+                handleChange("technologies", [...formData.technologies, ""]);
+              }}
               className="w-full"
             >
               <Plus size={16} className="mr-2" /> Add Technology
@@ -744,12 +840,13 @@ const CompanyApprovalForm = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() =>
+                    onClick={() => {
+                      console.log(`Removing client at index ${index}`);
                       handleChange(
                         "clients",
                         formData.clients.filter((_, i) => i !== index)
-                      )
-                    }
+                      );
+                    }}
                   >
                     <Minus size={16} />
                   </Button>
@@ -761,7 +858,10 @@ const CompanyApprovalForm = () => {
             )}
             <Button
               type="button"
-              onClick={() => handleChange("clients", [...formData.clients, ""])}
+              onClick={() => {
+                console.log("Adding new client");
+                handleChange("clients", [...formData.clients, ""]);
+              }}
               className="w-full"
             >
               <Plus size={16} className="mr-2" /> Add Client
@@ -773,14 +873,14 @@ const CompanyApprovalForm = () => {
               Source of Company *
             </label>
             <Input
-              value={formData.companySource}
-              onChange={(e) => handleChange("companySource", e.target.value)}
-              className={errors.companySource ? "border-red-500" : ""}
+              value={formData.sourceOfCompany}
+              onChange={(e) => handleChange("sourceOfCompany", e.target.value)}
+              className={errors.sourceOfCompany ? "border-red-500" : ""}
               placeholder="How did you find this company?"
             />
-            {errors.companySource && (
+            {errors.sourceOfCompany && (
               <p className="text-red-500 text-sm mt-1">
-                {errors.companySource}
+                {errors.sourceOfCompany}
               </p>
             )}
           </div>
@@ -790,21 +890,20 @@ const CompanyApprovalForm = () => {
               Reason to Choose This Company *
             </label>
             <Textarea
-              value={formData.reasonForChoice}
-              onChange={(e) => handleChange("reasonForChoice", e.target.value)}
-              className={errors.reasonForChoice ? "border-red-500" : ""}
+              value={formData.reasonToChoose}
+              onChange={(e) => handleChange("reasonToChoose", e.target.value)}
+              className={errors.reasonToChoose ? "border-red-500" : ""}
               placeholder="Why do you want to work with this company?"
             />
-            {errors.reasonForChoice && (
+            {errors.reasonToChoose && (
               <p className="text-red-500 text-sm mt-1">
-                {errors.reasonForChoice}
+                {errors.reasonToChoose}
               </p>
             )}
           </div>
         </div>
       </div>
 
-      {/* Submission status message */}
       {submitStatus && (
         <div
           className={`p-4 rounded-lg ${
@@ -832,7 +931,6 @@ const CompanyApprovalForm = () => {
     </div>
   );
 
-  // Redirect to login if not authenticated
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -858,7 +956,6 @@ const CompanyApprovalForm = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      {/* Loading Spinner */}
       {isSubmitting && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg">
@@ -877,7 +974,6 @@ const CompanyApprovalForm = () => {
         <CardContent className="items-center pt-6 overflow-y-auto">
           {renderStepIndicator()}
 
-          {/* Success Message */}
           {submitStatus === "success" && (
             <div className="bg-green-100 border border-green-200 rounded-lg p-4 mb-6">
               <div className="flex items-center">

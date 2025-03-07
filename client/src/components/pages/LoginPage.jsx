@@ -26,12 +26,11 @@ const InternshipLoginForm = () => {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated && user) {
-      // Redirect to the appropriate dashboard based on role
+    if (isAuthenticated && user?.role) { // Ensure user and role exist before redirecting
       const redirectPath = location.state?.from || `/${user.role}`;
-      navigate(redirectPath);
+      navigate(redirectPath, { replace: true });
     }
-  }, [isAuthenticated, user, navigate, location]);
+  }, [isAuthenticated, user, navigate, location]);  
 
   const getUserMessage = () => {
     switch (selectedTab) {
@@ -85,14 +84,7 @@ const InternshipLoginForm = () => {
     }
 
     try {
-      const result = await login(payload);
-
-      if (result.success) {
-        // The redirection happens in the useEffect hook
-        console.log("Login successful");
-      } else {
-        setError(result.message || "Invalid credentials. Please try again.");
-      }
+      await login(payload);
     } catch (error) {
       console.error("Error during login:", error);
       setError("An unexpected error occurred. Please try again.");

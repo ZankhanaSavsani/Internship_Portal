@@ -53,7 +53,7 @@ const checkRoleAccess = (allowedRoles) => {
       try {
         let user = null;
         if (req.user.role === "admin") {
-          user = await Admin.findById(req.user.id);
+          user = await Admin.findById(req.user.id, { isDeleted: false });        
         } else if (req.user.role === "guide") {
           user = await Guide.findById(req.user.id, { isDeleted: false });
         } else if (req.user.role === "student") {
@@ -88,9 +88,10 @@ const refreshLimiter = rateLimit({
   message: { message: "Too many refresh attempts. Please try again later." }
 });
 
+
 module.exports = {
   loginLimiter,
   refreshLimiter,
   validateToken,
-  checkRoleAccess
+  checkRoleAccess,
 };
