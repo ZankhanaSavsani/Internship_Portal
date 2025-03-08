@@ -34,7 +34,7 @@ const CompanyApprovalForm = () => {
   const [submitMessage, setSubmitMessage] = useState("");
   const [formData, setFormData] = useState({
     student: user?._id || "",
-    studentName: user?.name || "",
+    studentName: user?.studentName || "",
     companyName: "",
     companyWebsite: "",
     companyAddress: "",
@@ -60,7 +60,7 @@ const CompanyApprovalForm = () => {
       setFormData((prev) => ({
         ...prev,
         student: user._id,
-        studentName: user.name,
+        studentName: user.studentName,
       }));
     }
   }, [user]);

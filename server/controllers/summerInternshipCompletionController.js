@@ -1,41 +1,51 @@
 const logger = require("../utils/logger");
-const { uploadFileToDrive, deleteLocalFile } = require("../utils/googleDriveUtils");
+const {
+  uploadFileToDrive,
+  deleteLocalFile,
+} = require("../utils/googleDriveUtils");
 const SummerInternshipCompletionStatus = require("../models/SummerInternshipCompletionFormModel");
-
+const mongoose = require('mongoose');
 
 // @desc   Get all internship completion statuses (excluding soft-deleted records)
 // @route  GET /api/summer-internships-completion
 exports.getAllInternshipCompletionStatuses = async (req, res, next) => {
   try {
     // Extract page and limit from query params, defaulting to page 1 and 10 items per page
-    const page = parseInt(req.query.page) || 1; 
-    const limit = parseInt(req.query.limit) || 10; 
-    const skip = (page - 1) * limit; 
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
     // Dynamic sorting
-    const sortField = req.query.sortBy || "createdAt"; 
+    const sortField = req.query.sortBy || "createdAt";
     const sortOrder = req.query.order === "desc" ? -1 : 1;
     const sortOptions = { [sortField]: sortOrder };
 
     // Dynamic filtering based on query params
     const filterOptions = { isDeleted: false }; // Exclude soft-deleted records
     if (req.query.companyName) {
-      filterOptions.companyName = { $regex: req.query.companyName, $options: "i" };
+      filterOptions.companyName = {
+        $regex: req.query.companyName,
+        $options: "i",
+      };
     }
     if (req.query.studentName) {
-      filterOptions.studentName = { $regex: req.query.studentName, $options: "i" };
+      filterOptions.studentName = {
+        $regex: req.query.studentName,
+        $options: "i",
+      };
     }
 
     // Fetch internship completion statuses with pagination, sorting, and filtering
     const statuses = await SummerInternshipCompletionStatus.find(filterOptions)
-      .populate("student", "name email")
-      .populate("company", "companyName companyAddress")
+      .populate("student", "name email") // Populate student details
       .sort(sortOptions)
       .skip(skip)
       .limit(limit);
 
     // Get the total number of matching records (excluding soft-deleted ones)
-    const total = await SummerInternshipCompletionStatus.countDocuments(filterOptions);
+    const total = await SummerInternshipCompletionStatus.countDocuments(
+      filterOptions
+    );
 
     res.status(200).json({
       total,
@@ -52,9 +62,9 @@ exports.getAllInternshipCompletionStatuses = async (req, res, next) => {
 // @route  GET /api/summer-internships-completion/:id
 exports.getInternshipCompletionStatusById = async (req, res, next) => {
   try {
-    const status = await SummerInternshipCompletionStatus.findById(req.params.id)
-      .populate("student", "name email")
-      .populate("company", "companyName companyAddress");
+    const status = await SummerInternshipCompletionStatus.findById(
+      req.params.id
+    ).populate("student", "name email"); // Populate student details
 
     if (!status || status.isDeleted) {
       return res.status(404).json({ message: "Internship status not found" });
@@ -70,14 +80,51 @@ exports.getInternshipCompletionStatusById = async (req, res, next) => {
 // @route  POST /api/summer-internships-completion
 exports.createInternshipCompletionStatus = async (req, res, next) => {
   try {
+    console.log("Request User:", req.user);
+
+    // Check if mongoose is properly imported
+    if (!mongoose) {
+      return res.status(500).json({
+        success: false,
+        message: "Server configuration error: mongoose not available"
+      });
+    }
+
+    // Make sure req.user exists
+    if (!req.user) {
+      logger.error("[POST /api/summer-internship-completion] User not authenticated");
+      return res.status(401).json({ 
+        success: false, 
+        message: "Authentication required" 
+      });
+    }
+
+    // Convert _id to proper ObjectId if it's an array
+    const student = Array.isArray(req.user._id)
+      ? mongoose.Types.ObjectId(req.user._id[0])
+      : req.user._id;
+
+    const studentName = req.user.studentName;
+
+    if (!student || !studentName) {
+      logger.error("[POST /api/summer-internship-completion] Invalid user!!");
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid user!!" });
+    }
+
     const { files } = req;
-    let internshipData = { ...req.body };
+    let internshipData = {
+      ...req.body,
+      student: student, // Use _id as the student reference
+      studentName: studentName, // Use the student's name from the user data
+    }; // Add student and studentName to the request body
 
     // Check if completion certificate is provided (required)
     if (!files?.completionCertificate?.[0]) {
       return res.status(400).json({
         success: false,
-        message: "Completion certificate is required"
+        message: "Completion certificate is required",
       });
     }
 
@@ -88,14 +135,14 @@ exports.createInternshipCompletionStatus = async (req, res, next) => {
         process.env.GOOGLE_DRIVE_FOLDER_ID
       );
       internshipData.completionCertificate = completionCertificateUrl;
-      
+
       // Delete local file after upload
       await deleteLocalFile(files.completionCertificate[0].path);
     } catch (error) {
-      logger.error('Error uploading completion certificate:', error);
+      logger.error("Error uploading completion certificate:", error);
       return res.status(500).json({
         success: false,
-        message: "Error uploading completion certificate"
+        message: "Error uploading completion certificate",
       });
     }
 
@@ -107,35 +154,38 @@ exports.createInternshipCompletionStatus = async (req, res, next) => {
           process.env.GOOGLE_DRIVE_FOLDER_ID
         );
         internshipData.stipendProof = stipendProofUrl;
-        
+
         // Delete local file after upload
         await deleteLocalFile(files.stipendProof[0].path);
       } catch (error) {
-        logger.error('Error uploading stipend proof:', error);
+        logger.error("Error uploading stipend proof:", error);
         return res.status(500).json({
           success: false,
-          message: "Error uploading stipend proof"
+          message: "Error uploading stipend proof",
         });
       }
     }
 
-    // Create the internship completion status in database
-    const newStatus = await SummerInternshipCompletionStatus.create(internshipData);
+    // Create the internship completion status in the database
+    const newStatus = await SummerInternshipCompletionStatus.create(
+      internshipData
+    );
 
     // Log success
-    logger.info(`New internship completion status created: ${newStatus._id}`);
+    logger.info(
+      `[POST /api/summer-internships-completion] Created ID: ${newStatus._id}`
+    );
 
     // Send response
     res.status(201).json({
       success: true,
       data: newStatus,
     });
-
   } catch (error) {
     // If any error occurs, make sure to clean up any uploaded files
     if (req.files) {
-      Object.values(req.files).forEach(fileArray => {
-        fileArray.forEach(file => {
+      Object.values(req.files).forEach((fileArray) => {
+        fileArray.forEach((file) => {
           if (file.path) {
             deleteLocalFile(file.path);
           }
@@ -150,11 +200,12 @@ exports.createInternshipCompletionStatus = async (req, res, next) => {
 // @route  PUT /api/summer-internships-completion/:id
 exports.updateInternshipCompletionStatus = async (req, res, next) => {
   try {
-    const updatedStatus = await SummerInternshipCompletionStatus.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    const updatedStatus =
+      await SummerInternshipCompletionStatus.findByIdAndUpdate(
+        req.params.id,
+        req.body,
+        { new: true, runValidators: true }
+      );
 
     if (!updatedStatus || updatedStatus.isDeleted) {
       return res.status(404).json({ message: "Internship status not found" });
@@ -171,10 +222,14 @@ exports.updateInternshipCompletionStatus = async (req, res, next) => {
 // @route  DELETE /api/summer-internships-completion/:id
 exports.deleteInternshipCompletionStatus = async (req, res, next) => {
   try {
-    const status = await SummerInternshipCompletionStatus.findById(req.params.id);
+    const status = await SummerInternshipCompletionStatus.findById(
+      req.params.id
+    );
 
     if (!status || status.isDeleted) {
-      return res.status(404).json({ message: "Internship status not found or already deleted" });
+      return res
+        .status(404)
+        .json({ message: "Internship status not found or already deleted" });
     }
 
     status.isDeleted = true;

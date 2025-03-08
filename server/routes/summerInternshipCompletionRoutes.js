@@ -12,13 +12,37 @@ const {
 const { checkRoleAccess } = require("../middleware/authMiddleware");
 const upload = multer({ dest: "uploads/" }); // Temporary storage for uploaded files
 
+// File validation middleware
+const validateFiles = (req, res, next) => {
+  if (!req.files?.completionCertificate?.[0]) {
+    return res.status(400).json({
+      success: false,
+      message: "Completion certificate is required",
+    });
+  }
+
+  if (req.files?.stipendProof?.[0]) {
+    const stipendProof = req.files.stipendProof[0];
+    if (!stipendProof.mimetype.startsWith("image/") && !stipendProof.mimetype.startsWith("application/pdf")) {
+      return res.status(400).json({
+        success: false,
+        message: "Stipend proof must be an image or PDF file",
+      });
+    }
+  }
+
+  next();
+};
+
 // Create internship completion status
 router.post(
   "/",
+  checkRoleAccess(["student"]),
   upload.fields([
     { name: "stipendProof", maxCount: 1 },
     { name: "completionCertificate", maxCount: 1 },
   ]),
+  validateFiles,
   validateInternshipCompletionStatus,
   createInternshipCompletionStatus
 );

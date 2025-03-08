@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../../layouts/AuthProvider";
 import {
   Card,
   CardContent,
@@ -26,11 +27,21 @@ import {
   Building2,
   Calendar,
   Upload,
+  CheckCircle,
+  AlertCircle,
+  Lock,
 } from "lucide-react";
+import axios from "axios";
 
 const SummerInternshipCompletionForm = () => {
+  const { user, isAuthenticated, loading } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState(null);
+  const [submitMessage, setSubmitMessage] = useState("");
   const [formData, setFormData] = useState({
+    student: user?._id || "",
+    studentName: user?.studentName || "",
     companyName: "",
     companyWebsite: "",
     companyCity: "",
@@ -43,15 +54,82 @@ const SummerInternshipCompletionForm = () => {
     endDate: "",
     hrDetails: {
       name: "",
-      contactNo: "",
+      phone: "",
       email: "",
     },
-    stipendAmount: "",
+    stipendAmount: 0,
     stipendProof: null,
     completionCertificate: null,
   });
 
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (user?._id && user?.studentName) {
+      setFormData((prev) => ({
+        ...prev,
+        student: user._id,
+        studentName: user.studentName,
+      }));
+    }
+  }, [user]);
+
+  // Map fields to their respective steps
+  const getStepForField = (fieldName) => {
+    if (!fieldName) {
+      console.error("Undefined field name passed to getStepForField");
+      return 1; // Default to first step if field is undefined
+    }
+
+    const step1Fields = [
+      "companyName",
+      "companyWebsite",
+      "companyCity",
+      "companyAddress",
+    ];
+    const step2Fields = [
+      "hrDetails.name",
+      "hrDetails.phone",
+      "hrDetails.email",
+    ];
+    const step3Fields = [
+      "modeOfInternship",
+      "typeOfInternship",
+      "technologies",
+      "technologiesDetails",
+    ];
+    const step4Fields = ["startDate", "endDate"];
+    const step5Fields = [
+      "stipendAmount",
+      "stipendProof",
+      "completionCertificate",
+    ];
+
+    if (step1Fields.includes(fieldName)) {
+      return 1;
+    } else if (step2Fields.includes(fieldName)) {
+      return 2;
+    } else if (step3Fields.includes(fieldName)) {
+      return 3;
+    } else if (step4Fields.includes(fieldName)) {
+      return 4;
+    } else if (step5Fields.includes(fieldName)) {
+      return 5;
+    }
+    console.log(`Field ${fieldName} mapped to step 4 (default)`);
+    return 4;
+  };
+
+  const validateURL = (url) => {
+    if (!url || typeof url !== "string") return false; // Ensure the URL is a non-empty string
+    try {
+      new URL(url);
+      return true;
+    } catch (error) {
+      console.error("URL validation error:", error);
+      return false;
+    }
+  };
 
   const steps = [
     {
@@ -91,20 +169,22 @@ const SummerInternshipCompletionForm = () => {
     return phoneRegex.test(phone);
   };
 
-  const validateURL = (url) => {
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
   const handleChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    if (field.startsWith("hrDetails.")) {
+      const [parent, child] = field.split(".");
+      setFormData((prev) => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value,
+        },
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+    }
 
     if (errors[field]) {
       setErrors((prev) => ({
@@ -160,8 +240,8 @@ const SummerInternshipCompletionForm = () => {
         if (!formData.hrDetails.name.trim()) {
           newErrors["hrDetails.name"] = "HR name is required";
         }
-        if (!validatePhone(formData.hrDetails.contactNo)) {
-          newErrors["hrDetails.contactNo"] = "Invalid contact number";
+        if (!validatePhone(formData.hrDetails.phone)) {
+          newErrors["hrDetails.phone"] = "Invalid contact number";
         }
         if (!validateEmail(formData.hrDetails.email)) {
           newErrors["hrDetails.email"] = "Invalid email address";
@@ -217,11 +297,20 @@ const SummerInternshipCompletionForm = () => {
         if (!formData.stipendAmount || parseFloat(formData.stipendAmount) < 0) {
           newErrors.stipendAmount = "Valid stipend amount is required";
         }
+        if (formData.stipendAmount > 0 && !formData.stipendProof) {
+          newErrors.stipendProof = "Stipend proof is required when stipend amount is greater than zero";
+        }
         if (!formData.completionCertificate) {
           newErrors.completionCertificate =
             "Completion Certificate is required";
         }
         break;
+      default:
+        console.error("Unexpected case value:", step);
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      console.error("Validation errors found:", newErrors);
     }
 
     setErrors(newErrors);
@@ -231,48 +320,245 @@ const SummerInternshipCompletionForm = () => {
   const handleNext = () => {
     if (validateStep(currentStep)) {
       setCurrentStep((prev) => Math.min(prev + 1, 5));
+    } else {
+      console.error(`Step ${currentStep} validation failed`);
     }
   };
 
   const handlePrevious = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
+    setSubmitStatus(null);
+    setSubmitMessage("");
   };
 
-  const handleFileChange = (event) => {
+  const handleFileChange = (field, event) => {
     const file = event.target.files[0];
     setFormData((prev) => ({
       ...prev,
-      offerLetter: file,
+      [field]: file,
     }));
 
-    if (errors.offerLetter) {
+    if (errors[field]) {
       setErrors((prev) => ({
         ...prev,
-        offerLetter: undefined,
+        [field]: undefined,
       }));
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validateStep(4)) {
-      console.log("Form submitted:", formData);
-      // Here you would typically send the data to your backend
-      const submissionData = new FormData();
-      Object.keys(formData).forEach((key) => {
-        if (key === "hrDetails") {
-          Object.keys(formData.hrDetails).forEach((hrKey) => {
-            submissionData.append(
-              `hrDetails.${hrKey}`,
-              formData.hrDetails[hrKey]
-            );
-          });
-        } else {
-          submissionData.append(key, formData[key]);
+
+    if (!isAuthenticated) {
+      console.error("Submit attempt failed: User not authenticated");
+      setSubmitStatus("error");
+      setSubmitMessage("You must be logged in to submit this form.");
+      return;
+    }
+
+    if (validateStep(currentStep)) {
+      setIsSubmitting(true);
+      try {
+        // Initialize FormData
+        const submissionData = new FormData();
+
+        // Append all fields to FormData
+        submissionData.append("student", user._id);
+        submissionData.append("studentName", user.studentName);
+
+        Object.keys(formData).forEach((key) => {
+          if (key === "hrDetails") {
+            Object.keys(formData.hrDetails).forEach((hrKey) => {
+              submissionData.append(
+                `hrDetails[${hrKey}]`,
+                formData.hrDetails[hrKey]
+              );
+            });
+          } else if (key === "technologies") {
+            formData.technologies.forEach((tech, index) => {
+              submissionData.append(`technologies[${index}]`, tech);
+            });
+          } else if (
+            key === "stipendProof" ||
+            key === "completionCertificate"
+          ) {
+            if (formData[key]) {
+              submissionData.append(key, formData[key]);
+            }
+          } else {
+            submissionData.append(key, formData[key]);
+          }
+        });
+
+        // Debug: Log the keys in FormData to verify file inclusion
+        const formDataKeys = [];
+        for (let key of submissionData.keys()) {
+          formDataKeys.push(key);
         }
-      });
+        console.log("FormData keys:", formDataKeys);
+
+        // Debug: Log the values in FormData
+        console.log("FormData values:");
+        for (let [key, value] of submissionData.entries()) {
+          console.log(key, value);
+        }
+
+        // Send the request
+        const response = await axios.post(
+          "http://localhost:5000/api/summer-internship-completion",
+          submissionData,
+          {
+            withCredentials: true,
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+
+        console.log("Form submission successful:", response.data);
+        setSubmitStatus("success");
+        setSubmitMessage(
+          response.data.message || "Form submitted successfully!"
+        );
+
+        // Reset form data
+        setFormData({
+          student: user?._id || "",
+          studentName: user?.studentName || "",
+          companyName: "",
+          companyWebsite: "",
+          companyCity: "",
+          companyAddress: "",
+          modeOfInternship: "",
+          typeOfInternship: "",
+          technologies: [""],
+          technologiesDetails: "",
+          startDate: "",
+          endDate: "",
+          hrDetails: {
+            name: "",
+            phone: "",
+            email: "",
+          },
+          stipendAmount: 0,
+          stipendProof: null,
+          completionCertificate: null,
+        });
+        setCurrentStep(1);
+      } catch (error) {
+        console.error("Form submission error:", error);
+        console.error("Server response:", error.response?.data);
+        setSubmitStatus("error");
+
+        if (error.response?.data?.errors) {
+          const backendErrors = {};
+          const errorsArray = Array.isArray(error.response.data.errors)
+            ? error.response.data.errors
+            : [error.response.data.errors];
+
+          errorsArray.forEach((err) => {
+            if (err && err.field) {
+              backendErrors[err.field] = err.message;
+            }
+          });
+
+          if (Object.keys(backendErrors).length > 0) {
+            console.error("Backend validation errors:", backendErrors);
+            setErrors(backendErrors);
+
+            const errorField = errorsArray[0]?.field;
+            if (errorField) {
+              const errorStep = getStepForField(errorField);
+              console.log(
+                `Navigating to step ${errorStep} for field ${errorField}`
+              );
+              setCurrentStep(errorStep);
+
+              setTimeout(() => {
+                const fieldElement = document.querySelector(
+                  `[name="${errorField}"]`
+                );
+                if (fieldElement) {
+                  fieldElement.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center",
+                  });
+                  fieldElement.focus();
+                }
+              }, 100);
+            }
+          } else {
+            setSubmitMessage(
+              error.response?.data?.message ||
+                "An error occurred while submitting the form."
+            );
+          }
+        } else {
+          setSubmitMessage(
+            error.response?.data?.message ||
+              "An error occurred while submitting the form."
+          );
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      console.error("Form validation failed on submission");
     }
   };
+
+  const renderAuthNotice = () => (
+    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+      <div className="flex items-center">
+        <Lock className="text-amber-500 mr-2 w-5 h-5" />
+        <div>
+          <h3 className="font-medium text-amber-800">
+            Authentication Required
+          </h3>
+          <p className="text-sm text-amber-700">
+            You must be logged in to submit this form.
+          </p>
+        </div>
+      </div>
+      <Button
+        onClick={() => (window.location.href = "/login")} // Redirect to login page
+        className="mt-2 bg-amber-600 hover:bg-amber-700 text-white"
+      >
+        Go to Login
+      </Button>
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <Card className="w-full max-w-md p-6 text-center">
+          <CardHeader>
+            <CardTitle>Loading...</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center my-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
+            </div>
+            <p>Verifying your authentication status...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+        <Card className="w-full max-w-4xl mx-auto bg-gray-50 max-h-[90vh]">
+          <CardHeader className="border-b bg-white">
+            <CardTitle className="text-2xl font-bold text-gray-800">
+              Summer Internship Completion Form
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">{renderAuthNotice()}</CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const renderStepIndicator = () => (
     <div className="mb-8">
@@ -401,14 +687,14 @@ const SummerInternshipCompletionForm = () => {
             )}
 
             <Input
-              placeholder="HR Contact Number *"
-              value={formData.hrDetails.contactNo}
-              onChange={(e) => handleHRChange("contactNo", e.target.value)}
-              className={errors["hrDetails.contactNo"] ? "border-red-500" : ""}
+              placeholder="HR phone Number *"
+              value={formData.hrDetails.phone}
+              onChange={(e) => handleHRChange("phone", e.target.value)}
+              className={errors["hrDetails.phone"] ? "border-red-500" : ""}
             />
-            {errors["hrDetails.contactNo"] && (
+            {errors["hrDetails.phone"] && (
               <p className="text-red-500 text-sm mt-1">
-                {errors["hrDetails.contactNo"]}
+                {errors["hrDetails.phone"]}
               </p>
             )}
 
@@ -534,7 +820,6 @@ const SummerInternshipCompletionForm = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    // size="icon"
                     onClick={() =>
                       handleChange(
                         "technologies",
@@ -549,7 +834,6 @@ const SummerInternshipCompletionForm = () => {
             ))}
             <Button
               type="button"
-              // variant="outline"
               onClick={() =>
                 handleChange("technologies", [...formData.technologies, ""])
               }
@@ -631,7 +915,7 @@ const SummerInternshipCompletionForm = () => {
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="space-y-4">
-        <div>
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Stipend Amount *
             </label>
@@ -651,11 +935,12 @@ const SummerInternshipCompletionForm = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-            Stipend Proof *
+              Stipend Proof {formData.stipendAmount > 0 && "(Required)"}
             </label>
             <Input
               type="file"
-              onChange={handleFileChange}
+              name="stipendProof" // Explicit name attribute
+              onChange={(e) => handleFileChange("stipendProof", e)}
               accept=".pdf,.jpg,.jpeg,.png"
               className={errors.stipendProof ? "border-red-500" : ""}
             />
@@ -668,16 +953,19 @@ const SummerInternshipCompletionForm = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-            Completion Certificate *
+              Completion Certificate *
             </label>
             <Input
               type="file"
-              onChange={handleFileChange}
+              name="completionCertificate" // Explicit name attribute
+              onChange={(e) => handleFileChange("completionCertificate", e)}
               accept=".pdf,.jpg,.jpeg,.png"
               className={errors.completionCertificate ? "border-red-500" : ""}
             />
             {errors.completionCertificate && (
-              <p className="text-red-500 text-sm mt-1">{errors.completionCertificate}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {errors.completionCertificate}
+              </p>
             )}
             <p className="text-xs text-gray-500 mt-1">
               Accepted formats: PDF, JPG, PNG (Max 5MB)
@@ -685,62 +973,97 @@ const SummerInternshipCompletionForm = () => {
           </div>
         </div>
       </div>
+      {submitStatus && (
+        <div
+          className={`p-4 rounded-lg ${
+            submitStatus === "success"
+              ? "bg-green-100 border border-green-200"
+              : "bg-red-100 border border-red-200"
+          }`}
+        >
+          <div className="flex items-center">
+            {submitStatus === "success" ? (
+              <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
+            )}
+            <p
+              className={`text-sm ${
+                submitStatus === "success" ? "text-green-700" : "text-red-700"
+              }`}
+            >
+              {submitMessage}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-    <Card className="w-full max-w-4xl mx-auto bg-gray-50 max-h-[90vh]">
-      <CardHeader className="border-b bg-white">
-        <CardTitle className="text-2xl font-bold text-gray-800">
-          Summer Internship Completion Form
-        </CardTitle>
-      </CardHeader>
+      <Card className="w-full max-w-4xl mx-auto bg-gray-50 max-h-[90vh]">
+        <CardHeader className="border-b bg-white">
+          <CardTitle className="text-2xl font-bold text-gray-800">
+            Summer Internship Completion Form
+          </CardTitle>
+        </CardHeader>
 
-      <CardContent className="pt-6">
-        {renderStepIndicator()}
-        <form onSubmit={handleSubmit}>
-          {currentStep === 1 && renderCompanyDetails()}
-          {currentStep === 2 && renderHR()}
-          {currentStep === 3 && renderInternshipDetails()}
-          {currentStep === 4 && renderDuration()}
-          {currentStep === 5 && renderDocuments()}
-        </form>
-      </CardContent>
+        <CardContent className="pt-6">
+          {renderStepIndicator()}
 
-      <CardFooter className="flex justify-between border-t bg-white mt-6 p-6">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handlePrevious}
-          disabled={currentStep === 1}
-          className="text-gray-600 hover:bg-gray-100"
-        >
-          <ChevronLeft className="w-4 h-4 mr-2" />
-          Previous
-        </Button>
+          {submitStatus === "success" && (
+            <div className="bg-green-100 border border-green-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center">
+                <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+                <p className="text-sm text-green-700">{submitMessage}</p>
+              </div>
+            </div>
+          )}
 
-        {currentStep < 5 ? (
+          <form onSubmit={handleSubmit}>
+            {currentStep === 1 && renderCompanyDetails()}
+            {currentStep === 2 && renderHR()}
+            {currentStep === 3 && renderInternshipDetails()}
+            {currentStep === 4 && renderDuration()}
+            {currentStep === 5 && renderDocuments()}
+          </form>
+        </CardContent>
+
+        <CardFooter className="flex justify-between border-t bg-white mt-6 p-6">
           <Button
             type="button"
-            onClick={handleNext}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            variant="outline"
+            onClick={handlePrevious}
+            disabled={currentStep === 1}
+            className="text-gray-600 hover:bg-gray-100"
           >
-            Next
-            <ChevronRight className="w-4 h-4 ml-2" />
+            <ChevronLeft className="w-4 h-4 mr-2" />
+            Previous
           </Button>
-        ) : (
-          <Button
-            type="submit"
-            onClick={handleSubmit}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            Submit Application
-            <Save className="w-4 h-4 ml-2" />
-          </Button>
-        )}
-      </CardFooter>
-    </Card>
+
+          {currentStep < 5 ? (
+            <Button
+              type="button"
+              onClick={handleNext}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-2" />
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              onClick={handleSubmit}
+              className="bg-green-600 hover:bg-green-700 text-white"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Submitting..." : "Submit Application"}
+              <Save className="w-4 h-4 ml-2" />
+            </Button>
+          )}
+        </CardFooter>
+      </Card>
     </div>
   );
 };

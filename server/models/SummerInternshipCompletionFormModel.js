@@ -7,7 +7,10 @@ const summerInternshipCompletionStatusSchema = new mongoose.Schema(
       ref: "Student", // Reference to the Student model
       required: true,
     },
-
+    studentName: {
+      type: String,
+      required: true,
+    },
     // Company Details
     companyName: {
       type: String,
@@ -15,7 +18,14 @@ const summerInternshipCompletionStatusSchema = new mongoose.Schema(
     },
     companyWebsite: {
       type: String,
-    },
+      required: true,
+      validate: {
+        validator: function (value) {
+          return /^(https?:\/\/)?([\da-z\.-]+)(\.[a-z\.]{2,6})?([\/\w \.-]*)*\/?$/.test(value);
+        },
+        message: "Invalid company website URL",
+      },
+    }, 
     companyAddress: {
       type: String,
       required: true,
@@ -32,8 +42,14 @@ const summerInternshipCompletionStatusSchema = new mongoose.Schema(
       required: true,
     },
     technologies: {
-      type: [String], // Array of technologies
-      required: true,
+      type: [String],
+      required: true, // Changed to required for clarity
+      validate: {
+        validator: function (value) {
+          return Array.isArray(value) && value.length > 0;
+        },
+        message: "At least one technology is required",
+      },
     },
     technologiesDetails: {
       type: String,
@@ -58,8 +74,26 @@ const summerInternshipCompletionStatusSchema = new mongoose.Schema(
     // HR Contact Details
     hrDetails: {
       name: { type: String, required: true },
-      contactNo: { type: String, required: true },
-      email: { type: String, required: true },
+      phone: {
+        type: String,
+        required: true,
+        validate: {
+          validator: function (value) {
+            return /^\+?[\d\s-]{10,}$/.test(value);
+          },
+          message: "Invalid phone number format",
+        },
+      },
+      email: {
+        type: String,
+        required: true,
+        validate: {
+          validator: function (value) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+          },
+          message: "Invalid email format",
+        },
+      },
     },
 
     // Financial & Completion Documents
