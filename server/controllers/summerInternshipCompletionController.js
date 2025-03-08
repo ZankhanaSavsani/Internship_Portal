@@ -1,5 +1,6 @@
 const logger = require("../utils/logger");
 const {
+  generateCustomFilename,
   uploadFileToDrive,
   deleteLocalFile,
 } = require("../utils/googleDriveUtils");
@@ -128,11 +129,20 @@ exports.createInternshipCompletionStatus = async (req, res, next) => {
       });
     }
 
+    // Generate custom filename for completion certificate
+    const completionCertificateFilename = generateCustomFilename(
+      req.user.studentId, // Assuming studentId is available in req.user
+      req.user.studentName,
+      "completionCertificate", 
+      files.completionCertificate[0].originalname
+    );
+
     // Upload completion certificate to Google Drive
     try {
       const completionCertificateUrl = await uploadFileToDrive(
         files.completionCertificate[0],
-        process.env.GOOGLE_DRIVE_FOLDER_ID
+        process.env.GOOGLE_DRIVE_FOLDER_ID,
+        completionCertificateFilename // Pass the custom filename
       );
       internshipData.completionCertificate = completionCertificateUrl;
 
@@ -148,10 +158,20 @@ exports.createInternshipCompletionStatus = async (req, res, next) => {
 
     // Upload stipend proof if provided (optional)
     if (files?.stipendProof?.[0]) {
+
+      // Generate custom filename for stipend proof
+      const stipendProofFilename = generateCustomFilename(
+        req.user.studentId, // Assuming studentId is available in req.user
+        req.user.studentName,
+        "stipendProof",
+        files.stipendProof[0].originalname
+      );
+
       try {
         const stipendProofUrl = await uploadFileToDrive(
           files.stipendProof[0],
-          process.env.GOOGLE_DRIVE_FOLDER_ID
+          process.env.GOOGLE_DRIVE_FOLDER_ID,
+          stipendProofFilename // Pass the custom filename
         );
         internshipData.stipendProof = stipendProofUrl;
 

@@ -8,11 +8,22 @@ const auth = new google.auth.GoogleAuth({
 
 const drive = google.drive({ version: "v3", auth });
 
-const uploadFileToDrive = async (file, folderId) => {
+const generateCustomFilename = (studentId, studentName, fileType, originalFilename) => {
+  // Remove spaces and special characters from studentName
+  const sanitizedStudentName = studentName.replace(/[^a-zA-Z0-9]/g, "_");
+
+  // Generate the custom filename
+  return `${studentId}_${sanitizedStudentName}_${fileType}_${originalFilename}`;
+};
+
+const uploadFileToDrive = async (file, folderId, customFilename) => {
   try {
+    // Use the customFilename if provided, otherwise use the original filename
+    const fileName = customFilename || file.originalname;
+
     const response = await drive.files.create({
       requestBody: {
-        name: file.originalname,
+        name: fileName, // Use the custom filename here
         mimeType: file.mimetype,
         parents: [folderId],
       },
@@ -22,6 +33,7 @@ const uploadFileToDrive = async (file, folderId) => {
       },
     });
 
+    // Make the file publicly accessible
     await drive.permissions.create({
       fileId: response.data.id,
       requestBody: {
@@ -30,6 +42,7 @@ const uploadFileToDrive = async (file, folderId) => {
       },
     });
 
+    // Return the file URL
     return `https://drive.google.com/uc?export=view&id=${response.data.id}`;
   } catch (error) {
     console.error("Error uploading file to Google Drive:", error);
@@ -44,4 +57,4 @@ const deleteLocalFile = (filePath) => {
   });
 };
 
-module.exports = { uploadFileToDrive, deleteLocalFile };
+module.exports = { generateCustomFilename, uploadFileToDrive, deleteLocalFile };

@@ -1002,16 +1002,26 @@ const SummerInternshipCompletionForm = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <Card className="w-full max-w-4xl mx-auto bg-gray-50 max-h-[90vh]">
-        <CardHeader className="border-b bg-white">
+      {/* Submitting Overlay */}
+      {isSubmitting && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <p className="text-lg font-semibold">Submitting...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700 mt-4"></div>
+          </div>
+        </div>
+      )}
+  
+      <Card className="w-full max-w-4xl mx-auto bg-gray-50 overflow-y-auto max-h-[90vh]">
+        <CardHeader className="border-b bg-white sticky top-0 z-10">
           <CardTitle className="text-2xl font-bold text-gray-800">
             Summer Internship Completion Form
           </CardTitle>
         </CardHeader>
-
-        <CardContent className="pt-6">
+  
+        <CardContent className="pt-6 overflow-y-auto">
           {renderStepIndicator()}
-
+  
           {submitStatus === "success" && (
             <div className="bg-green-100 border border-green-200 rounded-lg p-4 mb-6">
               <div className="flex items-center">
@@ -1020,7 +1030,7 @@ const SummerInternshipCompletionForm = () => {
               </div>
             </div>
           )}
-
+  
           <form onSubmit={handleSubmit}>
             {currentStep === 1 && renderCompanyDetails()}
             {currentStep === 2 && renderHR()}
@@ -1029,8 +1039,8 @@ const SummerInternshipCompletionForm = () => {
             {currentStep === 5 && renderDocuments()}
           </form>
         </CardContent>
-
-        <CardFooter className="flex justify-between border-t bg-white mt-6 p-6">
+  
+        <CardFooter className="flex justify-between border-t bg-white sticky bottom-0 z-10 mt-6 p-6">
           <Button
             type="button"
             variant="outline"
@@ -1041,7 +1051,7 @@ const SummerInternshipCompletionForm = () => {
             <ChevronLeft className="w-4 h-4 mr-2" />
             Previous
           </Button>
-
+  
           {currentStep < 5 ? (
             <Button
               type="button"
