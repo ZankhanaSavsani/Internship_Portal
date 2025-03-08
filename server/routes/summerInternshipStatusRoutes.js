@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const upload = require("../middleware/multerMiddleware");
+const {upload , handleMulterErrors} = require("../middleware/multerMiddleware");
 const {
   getAllInternshipStatuses,
   getInternshipStatusById,
@@ -9,12 +9,27 @@ const {
   deleteInternshipStatus,
 } = require("../controllers/summerInternshipStatusController");
 const { checkRoleAccess } = require("../middleware/authMiddleware");
-const { validateInternshipStatus } = require("../middleware/validateInternshipStatusMiddleware");
+const { validateInternshipStatus} = require("../middleware/validateInternshipStatusMiddleware");
+
+const validateFiles = (req, res, next) => {
+  if (!req.file) {
+    return res.status(400).json({
+      success: false,
+      message: "offer Letter is required",
+    });
+  }
+
+  next();
+};
+
 
 // Apply Multer middleware for file uploads
 router.post(
   "/",
+  checkRoleAccess(["student"]),
   upload.single("offerLetter"), // Handle single file upload
+  handleMulterErrors,
+  validateFiles,
   validateInternshipStatus,
   createInternshipStatus
 );

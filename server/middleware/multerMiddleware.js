@@ -1,5 +1,32 @@
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
+
+const handleMulterErrors = (err, req, res, next) => {
+  if (err) {
+    // Handle Multer errors
+    if (err instanceof multer.MulterError) {
+      // Multer-specific errors (e.g., file size exceeded)
+      return res.status(400).json({
+        success: false,
+        message: err.message,
+      });
+    } else {
+      // Other errors (e.g., invalid file type)
+      return res.status(400).json({
+        success: false,
+        message: err.message,
+      });
+    }
+  }
+  // If no error, proceed to the next middleware
+  next();
+};
+
+// Create the "uploads" directory if it doesn't exist
+if (!fs.existsSync("uploads")) {
+  fs.mkdirSync("uploads");
+}
 
 // Set up storage for uploaded files
 const storage = multer.diskStorage({
@@ -13,12 +40,13 @@ const storage = multer.diskStorage({
   },
 });
 
-// File filter to allow only specific file types (e.g., PDF)
+// File filter to allow specific file types (PDF, JPEG, PNG)
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype === "application/pdf") {
+  const allowedTypes = ["application/pdf", "image/jpeg", "image/png"];
+  if (allowedTypes.includes(file.mimetype)) {
     cb(null, true); // Accept the file
   } else {
-    cb(new Error("Only PDF files are allowed"), false); // Reject the file
+    cb(new Error("Only PDF, JPEG, and PNG files are allowed"), false); // Reject the file
   }
 };
 
@@ -29,4 +57,4 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // Limit file size to 5MB
 });
 
-module.exports = upload;
+module.exports = {upload, handleMulterErrors};

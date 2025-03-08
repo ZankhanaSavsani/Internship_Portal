@@ -11,6 +11,7 @@ const {
 } = require("../controllers/summerInternshipCompletionController");
 const { checkRoleAccess } = require("../middleware/authMiddleware");
 const upload = multer({ dest: "uploads/" }); // Temporary storage for uploaded files
+const {handleMulterErrors} = require("../middleware/multerMiddleware");
 
 // File validation middleware
 const validateFiles = (req, res, next) => {
@@ -42,6 +43,7 @@ router.post(
     { name: "stipendProof", maxCount: 1 },
     { name: "completionCertificate", maxCount: 1 },
   ]),
+  handleMulterErrors,
   validateFiles,
   validateInternshipCompletionStatus,
   createInternshipCompletionStatus
