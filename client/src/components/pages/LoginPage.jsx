@@ -12,7 +12,12 @@ import {
 } from "lucide-react";
 
 const InternshipLoginForm = () => {
-  const { login, isAuthenticated, user, loading: authLoading } = useContext(AuthContext);
+  const {
+    login,
+    isAuthenticated,
+    user,
+    loading: authLoading,
+  } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
@@ -24,13 +29,19 @@ const InternshipLoginForm = () => {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated && user?.role) { // Ensure user and role exist before redirecting
-      const redirectPath = location.state?.from || `/${user.role}`;
-      navigate(redirectPath, { replace: true });
+    if (isAuthenticated && user?.role) {
+      // Check if the student has provided their name and completed onboarding
+      if (!user.studentName || !user.isOnboarded) {
+        // Redirect to the onboarding page
+        navigate("/student/onboarding", { replace: true });
+      } else {
+        // Redirect based on role
+        const redirectPath = location.state?.from || `/${user.role}`;
+        navigate(redirectPath, { replace: true });
+      }
     }
-  }, [isAuthenticated, user, navigate, location]);  
+  }, [isAuthenticated, user, navigate, location]);
 
   const getUserMessage = () => {
     switch (selectedTab) {

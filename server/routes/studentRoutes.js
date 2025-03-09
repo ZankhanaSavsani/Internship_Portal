@@ -6,6 +6,7 @@ const {
   getAllStudents,
   getStudentById,
   updateStudent,
+  updateStudentName,
   deleteStudent,
 } = require("../controllers/studentController");
 const { checkRoleAccess } = require("../middleware/authMiddleware");
@@ -25,6 +26,9 @@ router.put("/:id",checkRoleAccess(["student", "admin"]), validateStudentInput, u
 
 // Soft delete student
 router.delete("/:id", checkRoleAccess(["admin"]), deleteStudent);
+
+// PATCH /api/students/:id
+router.patch("/:id", checkRoleAccess(["student"]), updateStudentName);
 
 
 module.exports = router;

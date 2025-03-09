@@ -118,6 +118,30 @@ exports.updateStudent = async (req, res, next) => {
   }
 };
 
+// @desc   Update student name and onboarding status
+// @route  PATCH /api/students/:id
+exports.updateStudentName = async (req, res) => {
+  try {
+    const id  = req.user._id;
+    const { studentName, isOnboarded } = req.body;
+
+    const updatedStudent = await Student.findByIdAndUpdate(
+      id,
+      { studentName, isOnboarded },
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedStudent) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    res.status(200).json({ success: true, data: updatedStudent });
+  } catch (error) {
+    console.error("Error updating student:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
 // @desc   Soft delete a student record
 // @route  DELETE /api/students/:id
 exports.deleteStudent = async (req, res, next) => {

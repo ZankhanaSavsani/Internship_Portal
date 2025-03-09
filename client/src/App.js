@@ -11,6 +11,7 @@ import AddWeeklyReportPage from "./components/student/pages/AddWeeklyReportPage"
 import SummerInternshipCompletionForm from "./components/student/pages/SummerInternshipCompletionStatusForm";
 import SummerInternshipStatusForm from "./components/student/pages/SummerInternshipStatusForm";
 import StudentProfile from "./components/student/pages/StudentProfile";
+import OnboardingPage from "./components/student/pages/OnboardingPage";
 
 // Admin Components
 import AdminLayout from "./components/layouts/AdminLayout";
@@ -45,6 +46,7 @@ function App() {
         <Route element={<ProtectedRoute allowedRoles={["student"]} />}>
           <Route element={<StudentLayout />}>
             <Route path="/student" element={<Navigate to="/student/StudentProfile" replace />} />
+            <Route path="/student/onboarding" element={<OnboardingPage />} />
             <Route path="/student/Dashboard" element={<Dashboard />} />
             <Route path="/student/CompanyApprovalForm" element={<CompanyApprovalForm />} />
             <Route path="/student/WeeklyReportForm" element={<WeeklyReportForm />} />

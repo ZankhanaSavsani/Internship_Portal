@@ -15,6 +15,10 @@ const studentSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    isOnboarded: {
+      type: Boolean,
+      default: false, // Set to true after the student provides their name
+    },
     email: {
       type: String,
       required: false,
