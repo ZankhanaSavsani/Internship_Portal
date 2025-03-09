@@ -1,6 +1,6 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { AuthContext } from "../layouts/AuthProvider";
+import { useAuth } from "../layouts/AuthProvider";
 import {
   Eye,
   EyeOff,
@@ -9,15 +9,12 @@ import {
   UserCog,
   Users,
   Loader2,
+  CheckCircle
 } from "lucide-react";
+import axios from "axios";
 
 const InternshipLoginForm = () => {
-  const {
-    login,
-    isAuthenticated,
-    user,
-    loading: authLoading,
-  } = useContext(AuthContext);
+  const { login, isAuthenticated, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
@@ -28,11 +25,13 @@ const InternshipLoginForm = () => {
   });
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState(null);
+  const [submitMessage, setSubmitMessage] = useState("");
 
   useEffect(() => {
     if (isAuthenticated && user?.role) {
       // Check if the student has provided their name and completed onboarding
-      if (!user.studentName || !user.isOnboarded) {
+      if (user.role === "student" && (!user.studentName || !user.isOnboarded)) {
         // Redirect to the onboarding page
         navigate("/student/onboarding", { replace: true });
       } else {
@@ -95,10 +94,31 @@ const InternshipLoginForm = () => {
     }
 
     try {
+      // First try to login using the auth context
       await login(payload);
+      
+      // If successful, make the API call
+      const response = await axios.post("/api/auth/login", payload, {
+        withCredentials: true,
+      });
+
+      console.log("Form submission successful:", response.data);
+      setSubmitStatus("success");
+      setSubmitMessage(response.data.message || "Form submitted successfully!");
+
+      setFormData({
+        username: "",
+        password: "",
+      });
     } catch (error) {
       console.error("Error during login:", error);
-      setError("An unexpected error occurred. Please try again.");
+      // Extract error message from the response
+      if (error.response && error.response.data) {
+        // Get the message from the API response
+        setError(error.response.data.message || "Authentication failed");
+      } else {
+        setError("An unexpected error occurred. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -126,7 +146,23 @@ const InternshipLoginForm = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+      {isSubmitting && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <p className="text-lg font-semibold">Submitting...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700 mt-4"></div>
+          </div>
+        </div>
+      )}
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 space-y-6 transform transition-all hover:scale-[1.01]">
+        {submitStatus === "success" && (
+          <div className="bg-green-100 border border-green-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+              <p className="text-sm text-green-700">{submitMessage}</p>
+            </div>
+          </div>
+        )}
         {/* Logo/Brand Area */}
         <div className="flex justify-center mb-6">
           <div className="p-3 bg-blue-50 rounded-xl">

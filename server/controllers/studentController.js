@@ -3,46 +3,189 @@ const Student = require("../models/StudentModel");
 const logger = require("../utils/logger");
 const { sendEmail } = require("../utils/mailer");
 const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
+const mongoose = require("mongoose");
+
 
 // @desc   Create a new student record
 // @route  POST /api/students
 exports.createStudent = async (req, res, next) => {
   try {
     const { studentId, semester } = req.body;
-
+    
     // Generate random password before creating student
     const plainPassword = crypto.randomBytes(8).toString("hex");
-
+    
     // Create the student with the plain password
     const student = new Student({
       studentId,
       semester,
       password: plainPassword, // This will be hashed in the pre-save hook
     });
-
+    
     // Save the student to the database
     await student.save();
     logger.info(`[POST /api/students] Created student ID: ${student._id}`);
-
-    // Prepare email content
-    const emailSubject = "Your Login Credentials";
+    
+    // Prepare email content with HTML formatting
+    const emailSubject = "🎓 Welcome to Student Portal - Your Login Credentials";
     const emailContent = `
-      Hello,
-
-      Your account has been created successfully. Below are your login credentials:
-
-      Username: ${studentId}
-      Password: ${plainPassword}
-
-      Please change your password after logging in for the first time.
-
-      Regards,
-      Your Institution
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome to Student Portal</title>
+        <style>
+          body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #f8f9fa;
+          }
+          .email-container {
+            border: 1px solid #e0e0e0;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            background-color: #ffffff;
+          }
+          .email-header {
+            background-color: #3b82f6;
+            color: white;
+            padding: 20px 10px;
+            text-align: center;
+          }
+          .logo {
+            margin-bottom: 15px;
+          }
+          .email-body {
+            padding: 30px;
+            background-color: #ffffff;
+            text-align: center;
+          }
+          .welcome-emoji {
+            font-size: 40px;
+            margin-bottom: 15px;
+          }
+          .credentials-box {
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 25px 0;
+            text-align: left;
+          }
+          .credential-item {
+            margin-bottom: 15px;
+          }
+          .credential-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 100px;
+          }
+          .credential-value {
+            font-family: monospace;
+            background-color: #f3f4f6;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            letter-spacing: 0.5px;
+          }
+          .important-note {
+            background-color: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 25px 0;
+            text-align: left;
+            border-radius: 8px;
+          }
+          .email-footer {
+            background-color: #f9fafb;
+            padding: 20px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #6b7280;
+            border-top: 1px solid #e5e7eb;
+          }
+          .button {
+            display: inline-block;
+            background-color: #3b82f6;
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+            transition: all 0.2s ease;
+          }
+          .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
+          }
+          .support-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 0.9em;
+            color: #6b7280;
+          }
+          .emoji {
+            font-size: 20px;
+            vertical-align: middle;
+            margin-right: 5px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="email-container">
+          <div class="email-header">
+            <h1>Welcome to Student Portal</h1>
+          </div>
+          <div class="email-body">
+            <div class="welcome-emoji">
+              🎓✨
+            </div>
+            <h2>Hi Student!</h2>
+            <p>A new account for <strong>${studentId}</strong> has been created for you. Login to your account with the credentials listed below.</p>
+            
+            <div class="credentials-box">
+              <div class="credential-item">
+                <span class="credential-label"><span class="emoji">👤</span> Username:</span>
+                <span class="credential-value">${studentId}</span>
+              </div>
+              <div class="credential-item">
+                <span class="credential-label"><span class="emoji">🔑</span> Password:</span>
+                <span class="credential-value">${plainPassword}</span>
+              </div>
+            </div>
+            
+            <div class="important-note">
+              <span class="emoji">⚠️</span> <strong>Important:</strong> Please change your password after logging in for the first time for security purposes.
+            </div>
+            
+            <a href="http://localhost:3000/login" class="button">Login to Your Account</a>
+            
+            <div class="support-section">
+              <h3><span class="emoji">📞</span> Need Help?</h3>
+              <p>Text or Call: Brinda Patel : 74052 81125 | Email: brindapatel.cse@charusat.ac.in</p>
+              <p>Abhishek Patel : 90990 56918 | Email: abhishekpatel.cse@charusat.ac.in</p>
+            </div>
+          </div>
+          <div class="email-footer">
+            <p>&copy; ${new Date().getFullYear()} Your University. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
     `;
-
-    // Send email with credentials
-    await sendEmail(student.email, emailSubject, emailContent);
-
+    
+    // Send HTML email with credentials
+    await sendEmail(student.email, emailSubject, emailContent, true);
+    
     // Respond to the client
     res.status(201).json({
       success: true,
@@ -54,7 +197,20 @@ exports.createStudent = async (req, res, next) => {
     });
   } catch (error) {
     logger.error(`[POST /api/students] Error: ${error.message}`);
-    next(error);
+
+    // Handle duplicate key error
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "A student with the same ID, semester, and year already exists.",
+      });
+    }
+  
+    // Handle other errors
+    res.status(500).json({
+      success: false,
+      message: "An error occurred while adding the student.",
+    });
   }
 };
 
@@ -74,21 +230,21 @@ exports.getAllStudents = async (req, res, next) => {
 // @route  GET /api/students/:id
 exports.getStudentById = async (req, res, next) => {
   try {
-    const student = await Student.findById(req.params.id).where({
-      isDeleted: false,
-    });
+    // Validate the ID parameter
+    if (!mongoose.Types.ObjectId.isValid(req.user._id)) {
+      return res.status(400).json({ success: false, message: "Invalid student ID" });
+    }
+
+    // Find the student by ID and ensure they are not deleted
+    const student = await Student.findOne({ _id: req.user._id, isDeleted: false }).select("-password");
 
     if (!student) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Student not found" });
+      return res.status(404).json({ success: false, message: "Student not found" });
     }
 
     res.status(200).json({ success: true, data: student });
   } catch (error) {
-    logger.error(
-      `[GET /api/students/${req.params.id}] Error: ${error.message}`
-    );
+    logger.error(`[GET /api/students/${req.user._id}] Error: ${error.message}`);
     next(error);
   }
 };
@@ -98,7 +254,7 @@ exports.getStudentById = async (req, res, next) => {
 exports.updateStudent = async (req, res, next) => {
   try {
     const updatedStudent = await Student.findOneAndUpdate(
-      { _id: req.params.id, isDeleted: false },
+      { _id: req.user._id, isDeleted: false },
       req.body,
       { new: true, runValidators: true }
     );
@@ -112,7 +268,7 @@ exports.updateStudent = async (req, res, next) => {
     res.status(200).json({ success: true, data: updatedStudent });
   } catch (error) {
     logger.error(
-      `[PUT /api/students/${req.params.id}] Error: ${error.message}`
+      `[PUT /api/students/${req.user._id}] Error: ${error.message}`
     );
     next(error);
   }
@@ -142,11 +298,45 @@ exports.updateStudentName = async (req, res) => {
   }
 };
 
+// @desc   Change student password
+// @route  PATCH /api/students/change-password/:id
+// @access Private (only the student can change their own password)
+exports.changePassword = async (req, res) => {
+  try {
+    const id  = req.user._id;
+    const { currentPassword, newPassword } = req.body;
+
+    // Find the student by ID
+    const student = await Student.findById(id);
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    // Verify the current password
+    const isMatch = await student.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: "Current password is incorrect" });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the password
+    student.password = hashedPassword;
+    await student.save();
+
+    res.status(200).json({ success: true, message: "Password updated successfully" });
+  } catch (error) {
+    console.error("Error changing password:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
 // @desc   Soft delete a student record
 // @route  DELETE /api/students/:id
 exports.deleteStudent = async (req, res, next) => {
   try {
-    const student = await Student.findById(req.params.id);
+    const student = await Student.findById(req.user._id);
 
     if (!student || student.isDeleted) {
       return res
@@ -166,7 +356,7 @@ exports.deleteStudent = async (req, res, next) => {
       .json({ success: true, message: "Student deleted successfully" });
   } catch (error) {
     logger.error(
-      `[DELETE /api/students/${req.params.id}] Error: ${error.message}`
+      `[DELETE /api/students/${req.user._id}] Error: ${error.message}`
     );
     next(error);
   }

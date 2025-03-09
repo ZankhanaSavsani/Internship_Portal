@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Building2,
@@ -25,12 +25,23 @@ import {
 import { Button } from "../../ui/button";
 import { Badge } from "../../ui/badge";
 import { useAuth } from "../../layouts/AuthProvider";
+import Cookies from "js-cookie"; // Import js-cookie
 
 const NavLayout = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(3);
+  const [username, setUsername] = useState(""); // State to store the username
   const navigate = useNavigate();
   const { logout } = useAuth();
+
+  // Fetch the username from the cookie when the component mounts
+  useEffect(() => {
+    const userCookie = Cookies.get("user"); // Assuming the username is stored in a cookie named "user"
+    if (userCookie) {
+      const userData = JSON.parse(userCookie); // Parse the cookie data
+      setUsername(userData.adminName || "User"); // Set the username from the cookie
+    }
+  }, []);
 
   const navItems = [
     {
@@ -38,10 +49,10 @@ const NavLayout = ({ children }) => {
       text: "Company Approval",
       path: "/admin/CompanyApprovalForm",
     },
-    { 
-      icon: <FileText size={20} />, 
-      text: "Status", 
-      path: "/admin/SummerInternshipStatusForm" 
+    {
+      icon: <FileText size={20} />,
+      text: "Status",
+      path: "/admin/SummerInternshipStatusForm",
     },
     {
       icon: <CheckSquare size={20} />,
@@ -83,13 +94,13 @@ const NavLayout = ({ children }) => {
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 w-full bg-white z-50 px-4 py-3 border-b shadow-md flex justify-between items-center">
-      <div className="h-20 flex items-center">
-        <img
-          src="/images/logo.png"
-          alt="Company Logo"
-          className="h-full w-auto object-contain max-w-[250px]"
-        />
-      </div>
+        <div className="h-20 flex items-center">
+          <img
+            src="/images/logo.png"
+            alt="Company Logo"
+            className="h-full w-auto object-contain max-w-[250px]"
+          />
+        </div>
         <div className="flex items-center space-x-2">
           <Button variant="ghost" size="icon" className="relative">
             <Bell size={20} className="text-gray-600" />
@@ -121,7 +132,11 @@ const NavLayout = ({ children }) => {
         transition-transform duration-300 ease-in-out
         z-40
         flex flex-col
-        ${isOpen ? "translate-x-0 mt-16 lg:mt-0" : "-translate-x-full lg:translate-x-0"}
+        ${
+          isOpen
+            ? "translate-x-0 mt-16 lg:mt-0"
+            : "-translate-x-full lg:translate-x-0"
+        }
       `}
       >
         <div className="hidden lg:flex p-4 border-b bg-gray-100 justify-between items-center">
@@ -129,7 +144,7 @@ const NavLayout = ({ children }) => {
             <img
               src="/images/logo.png"
               alt="Company Logo"
-              cclassName="h-full w-auto object-contain max-w-[280px]"
+              className="h-full w-auto object-contain max-w-[280px]"
             />
           </div>
         </div>
@@ -170,12 +185,15 @@ const NavLayout = ({ children }) => {
                 <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
                   <User size={20} className="text-gray-700" />
                 </div>
-                <span className="font-medium text-gray-700">Zankhana</span>
+                <span className="font-medium text-gray-700">{username}</span>
                 <ChevronDown size={16} className="text-gray-600" />
               </div>
             }
           >
-            <CustomDropdownMenuItem className="cursor-pointer hover:bg-gray-100 p-3 rounded-lg" onClick={handleStudentProfile}>
+            <CustomDropdownMenuItem
+              className="cursor-pointer hover:bg-gray-100 p-3 rounded-lg"
+              onClick={handleStudentProfile}
+            >
               <User className="mr-2 h-4 w-4 text-gray-600" />
               <span>Profile</span>
             </CustomDropdownMenuItem>

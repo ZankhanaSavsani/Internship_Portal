@@ -8,27 +8,30 @@ const {
   updateStudent,
   updateStudentName,
   deleteStudent,
+  changePassword,
 } = require("../controllers/studentController");
-const { checkRoleAccess } = require("../middleware/authMiddleware");
+const {validateToken, checkRoleAccess } = require("../middleware/authMiddleware");
 const validateStudentInput = require("../middleware/validateStudentInput");
 
 // Create a student
-router.post("/", validateStudentInput, createStudent);
+router.post("/", checkRoleAccess(["admin"]), validateStudentInput, createStudent);
 
 // Get all students
-router.get("/", checkRoleAccess(["admin"]), getAllStudents);
+router.get("/", validateToken, checkRoleAccess(["admin"]), getAllStudents);
 
 // Get student by ID
-router.get("/:id",checkRoleAccess(["student", "guide", "admin"]), getStudentById);
+router.get("/:id", validateToken, checkRoleAccess(["student", "guide", "admin"]), getStudentById);
 
 // Update student
-router.put("/:id",checkRoleAccess(["student", "admin"]), validateStudentInput, updateStudent);
+router.put("/:id", validateToken, checkRoleAccess(["student", "admin"]), validateStudentInput, updateStudent);
 
 // Soft delete student
-router.delete("/:id", checkRoleAccess(["admin"]), deleteStudent);
+router.delete("/:id", validateToken, checkRoleAccess(["admin"]), deleteStudent);
 
 // PATCH /api/students/:id
-router.patch("/:id", checkRoleAccess(["student"]), updateStudentName);
+router.patch("/:id", validateToken, checkRoleAccess(["student"]), updateStudentName);
 
+// Route for changing password
+router.patch("/change-password/:id", validateToken, checkRoleAccess(["student"]), changePassword);
 
 module.exports = router;

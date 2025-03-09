@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -24,15 +24,25 @@ import {
 import { Button } from "../../ui/button";
 import { Badge } from "../../ui/badge";
 import { useAuth } from "../../layouts/AuthProvider";
+import Cookies from "js-cookie"; // Import js-cookie
 
 const NavLayout = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(3);
+  const [username, setUsername] = useState(""); // State to store the username
   const navigate = useNavigate();
   const { logout } = useAuth();
 
+  // Fetch the username from the cookie when the component mounts
+  useEffect(() => {
+    const userCookie = Cookies.get("user"); // Assuming the username is stored in a cookie named "user"
+    if (userCookie) {
+      const userData = JSON.parse(userCookie); // Parse the cookie data
+      setUsername(userData.studentName || "User"); // Set the username from the cookie
+    }
+  }, []);
+
   const navItems = [
-    // { icon: <LayoutDashboard size={20} />, text: "Dashboard", path: "/Dashboard" },
     {
       icon: <Building2 size={20} />,
       text: "Company Approval",
@@ -65,13 +75,13 @@ const NavLayout = ({ children }) => {
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 w-full bg-white z-50 px-4 py-3 border-b shadow-md flex justify-between items-center">
-      <div className="h-20 flex items-center">
-        <img
-          src="/images/logo.png"
-          alt="Company Logo"
-          className="h-full w-auto object-contain max-w-[250px]"
-        />
-      </div>
+        <div className="h-20 flex items-center">
+          <img
+            src="/images/logo.png"
+            alt="Company Logo"
+            className="h-full w-auto object-contain max-w-[250px]"
+          />
+        </div>
         <div className="flex items-center space-x-2">
           <Button variant="ghost" size="icon" className="relative">
             <Bell size={20} className="text-gray-600" />
@@ -107,13 +117,13 @@ const NavLayout = ({ children }) => {
       `}
       >
         <div className="hidden lg:flex p-4 border-b bg-gray-100 justify-between items-center">
-      <div className="h-20 flex items-center">
-        <img
-          src="/images/logo.png"
-          alt="Company Logo"
-          className="h-full w-auto object-contain max-w-[280px]"
-        />
-      </div>
+          <div className="h-20 flex items-center">
+            <img
+              src="/images/logo.png"
+              alt="Company Logo"
+              className="h-full w-auto object-contain max-w-[280px]"
+            />
+          </div>
         </div>
 
         {/* Navigation Items */}
@@ -155,7 +165,7 @@ const NavLayout = ({ children }) => {
                 <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
                   <User size={20} className="text-gray-700" />
                 </div>
-                <span className="font-medium text-gray-700">Zankhana</span>
+                <span className="font-medium text-gray-700">{username}</span>
                 <ChevronDown size={16} className="text-gray-600" />
               </div>
             }

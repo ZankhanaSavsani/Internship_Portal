@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "../../ui/alert";
 import axios from "axios";
 import { useAuth } from "../../layouts/AuthProvider";
 
-const StudentProfile = () => {
+const AdminProfile = () => {
   const { user } = useAuth(); // Get the authenticated user from the AuthProvider
   const [userData, setUserData] = useState({
     studentId: "",
@@ -312,4 +312,4 @@ const StudentProfile = () => {
   );
 };
 
-export default StudentProfile;
+export default AdminProfile;
