@@ -4,13 +4,31 @@ const logger = require("../utils/logger");
 // @desc   Create a new weekly report
 // @route  POST /api/weekly-reports
 exports.createWeeklyReport = async (req, res, next) => {
-  try {
-    const newReport = await WeeklyReport.create(req.body);
-    logger.info(`New weekly report created: ${newReport._id}`);
-    res.status(201).json(newReport);
-  } catch (error) {
-    next(error);
-  }
+    try {
+      const student = req.user._id;
+      const studentName = req.user.studentName;
+  
+      if (!student || !studentName) {
+        logger.error("[POST /api/weeklyReport] Invalid user!!");
+        return res.status(400).json({ success: false, message: "Invalid user!!" });
+      }
+  
+      // Add student and studentName to the request body
+      const reportData = {
+        ...req.body,
+        student: student, // Use _id as the student reference
+        studentName: studentName, // Use the student's name from the user data
+      };
+  
+      // Create the new approval
+      const newReport = await WeeklyReport.create(reportData);
+      logger.info(`[POST /api/weeklyReport] Created ID: ${newReport._id}`);
+  
+      res.status(201).json({ success: true, data: newReport });
+    } catch (error) {
+      logger.error(`[POST /api/weeklyReport] Error: ${error.message}`);
+      next(error);
+    }
 };
 
 // @desc   Get all weekly reports (excluding soft-deleted ones)

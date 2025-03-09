@@ -48,7 +48,7 @@ const weeklyReportSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    status: {
+    approvalStatus: {
       type: String,
       enum: ["Pending", "Approved", "Rejected"], // Guide's review status
       default: "Pending",
