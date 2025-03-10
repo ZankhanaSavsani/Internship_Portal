@@ -10,6 +10,7 @@ const {
   deleteStudent,
   changePassword,
   fetchStudent,
+  restoreStudent,
 } = require("../controllers/studentController");
 const {validateToken, checkRoleAccess } = require("../middleware/authMiddleware");
 const validateStudentInput = require("../middleware/validateStudentInput");
@@ -37,5 +38,8 @@ router.patch("/change-password/:id", validateToken, checkRoleAccess(["student"])
 
 // Fetch student by studentId and semester
 router.post("/fetch-student", validateToken, checkRoleAccess(["admin"]), fetchStudent);
+
+// Restore a soft-deleted student
+router.patch("/restore/:id", validateToken, checkRoleAccess(["admin"]), restoreStudent);
 
 module.exports = router;

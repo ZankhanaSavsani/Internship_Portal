@@ -23,7 +23,6 @@ const StudentManagementPage = () => {
   // State for status messages
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
   const [submitMessage, setSubmitMessage] = useState('');
@@ -32,7 +31,8 @@ const StudentManagementPage = () => {
   const handleSearch = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
+    setSubmitStatus(null);
+    setSubmitMessage('');
     setStudent(null);
     setIsEditing(false);
     
@@ -49,7 +49,6 @@ const StudentManagementPage = () => {
     setLoading(true);
     
     try {
-      // Changed from GET to POST method to match the backend route configuration
       const response = await axios.post('/api/students/fetch-student', 
         {}, // Empty body since we're passing data in query params
         {
@@ -103,7 +102,8 @@ const StudentManagementPage = () => {
   const handleUpdate = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
+    setSubmitStatus(null);
+    setSubmitMessage('');
     
     if (!isAuthenticated) {
       setError("You must be logged in to update student data.");
@@ -135,13 +135,15 @@ const StudentManagementPage = () => {
         setStudent(response.data.data);
         setEditFormData(response.data.data);
         setIsEditing(false);
-        setSuccess('Student data updated successfully!');
+        setSubmitStatus("success");
+        setSubmitMessage('Student data updated successfully!');
       } else if (response.data) {
         // Fallback for direct data response
         setStudent(response.data);
         setEditFormData(response.data);
         setIsEditing(false);
-        setSuccess('Student data updated successfully!');
+        setSubmitStatus("success");
+        setSubmitMessage('Student data updated successfully!');
       } else {
         throw new Error('Invalid data format returned from API');
       }
@@ -155,6 +157,54 @@ const StudentManagementPage = () => {
         setError('Failed to update student data: ' + (err.response?.data?.message || err.message));
         console.error(err);
       }
+    }
+  };
+
+  // Function to restore a soft-deleted student
+  const handleRestore = async () => {
+    setError('');
+    setSubmitStatus(null);
+    setSubmitMessage('');
+
+    if (!isAuthenticated) {
+      setError("You must be logged in to restore a student.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await axios.patch(
+        `/api/students/restore/${student._id}`,
+        {},
+        {
+          withCredentials: true,
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        }
+      );
+
+      // Check if the response has the expected structure
+      if (response.data && response.data.success === true && response.data.data) {
+        setStudent(response.data.data); // Update the student's state
+        setEditFormData(response.data.data); // Update the edit form data
+        setSubmitStatus("success");
+        setSubmitMessage('Student restored successfully!');
+      } else {
+        throw new Error('Invalid data format returned from API');
+      }
+    } catch (err) {
+      if (err.response && err.response.status === 403) {
+        setError('You do not have permission to restore this student');
+      } else {
+        setError('Failed to restore student: ' + (err.response?.data?.message || err.message));
+      }
+      setSubmitStatus("error");
+      setSubmitMessage('Failed to restore student.');
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -231,9 +281,8 @@ const StudentManagementPage = () => {
         </form>
       </div>
       
-      {/* Error and Success Messages */}
+      {/* Error Message */}
       {error && <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">{error}</div>}
-      {success && <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4">{success}</div>}
       
       {/* Loading Overlay */}
       {isSubmitting && (
@@ -284,14 +333,24 @@ const StudentManagementPage = () => {
           <div className="bg-white p-6 rounded-lg shadow-md">
             <div className="flex justify-between mb-4">
               <h2 className="text-xl font-bold">Student Details</h2>
-              {!isEditing && (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600"
-                >
-                  Edit
-                </button>
-              )}
+              <div className="flex gap-2">
+                {!isEditing && (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                  >
+                    Edit
+                  </button>
+                )}
+                {student.isDeleted && (
+                  <button
+                    onClick={handleRestore}
+                    className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                  >
+                    Restore
+                  </button>
+                )}
+              </div>
             </div>
             
             {isEditing ? (
@@ -362,15 +421,12 @@ const StudentManagementPage = () => {
                   </div>
                   <div>
                     <label className="block mb-1 font-medium">Deleted Status</label>
-                    <select
-                      name="isDeleted"
-                      value={editFormData.isDeleted?.toString() || "false"}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border rounded"
-                    >
-                      <option value="false">Active</option>
-                      <option value="true">Deleted</option>
-                    </select>
+                    <input
+                      type="text"
+                      value={editFormData.isDeleted ? 'Deleted' : 'Active'}
+                      className="w-full p-2 border rounded bg-gray-100"
+                      disabled
+                    />
                   </div>
                   <div>
                     <label className="block mb-1 font-medium">Reset Password</label>

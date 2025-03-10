@@ -403,25 +403,28 @@ exports.changePassword = async (req, res) => {
 // @route  DELETE /api/students/:id
 exports.deleteStudent = async (req, res, next) => {
   try {
-    const student = await Student.findById(req.user._id);
-
+    // Use the ID from the URL parameter instead of the logged-in user's ID
+    const studentId = req.params.id;
+    
+    const student = await Student.findById(studentId);
+    
     if (!student || student.isDeleted) {
       return res.status(404).json({
         success: false,
         message: "Student not found or already deleted",
       });
     }
-
+    
     student.isDeleted = true;
     student.deletedAt = new Date();
     await student.save();
-
+    
     res
       .status(200)
       .json({ success: true, message: "Student deleted successfully" });
   } catch (error) {
     logger.error(
-      `[DELETE /api/students/${req.user._id}] Error: ${error.message}`
+      `[DELETE /api/students/${req.params.id}] Error: ${error.message}`
     );
     next(error);
   }
@@ -474,5 +477,37 @@ exports.fetchStudent = async (req, res) => {
         message: "Internal server error",
         error: error.message,
       });
+  }
+};
+
+// @desc    Restore a soft-deleted student
+// @route   PATCH /api/students/restore/:id
+// @access  Private (Admin only)
+exports.restoreStudent = async (req, res) => {
+  try {
+    const studentId = req.params.id;
+
+    // Find and update the student
+    const restoredStudent = await Student.findOneAndUpdate(
+      { _id: studentId, isDeleted: true }, // Query: Only restore if the student is soft-deleted
+      { isDeleted: false, deletedAt: null }, // Update data
+      { new: true, runValidators: true } // Options
+    );
+
+    // If no student is found, return a 404 error
+    if (!restoredStudent) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found or already active",
+      });
+    }
+
+    // Return the restored student data
+    res.status(200).json({ success: true, data: restoredStudent });
+  } catch (error) {
+    console.error(`[PATCH /api/students/restore/${req.params.id}] Error: ${error.message}`, {
+      error,
+    });
+    res.status(500).json({ success: false, message: "Internal server error", error: error.message });
   }
 };
