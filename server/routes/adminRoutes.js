@@ -1,6 +1,6 @@
 // routes/adminRoutes.js
 const express = require("express");
-const { checkRoleAccess } = require("../middleware/authMiddleware");
+const {validateToken, checkRoleAccess } = require("../middleware/authMiddleware");
 const validateAdminInput = require("../middleware/validateAdminInput");
 const router = express.Router();
 const {
@@ -11,15 +11,15 @@ const {
 } = require("../controllers/adminController");
 
 // Create a new admin
-router.post("/", validateAdminInput, createAdmin);
+router.post("/", validateToken, checkRoleAccess(["admin"]), validateAdminInput, createAdmin);
 
 // Update an existing admin by ID
-router.put("/:id", checkRoleAccess(["admin"]), validateAdminInput, updateAdmin);
+router.put("/:id", validateToken, checkRoleAccess(["admin"]), validateAdminInput, updateAdmin);
 
 // Soft delete an admin by ID
-router.delete("/:id", checkRoleAccess(["admin"]), deleteAdmin);
+router.delete("/:id", validateToken, checkRoleAccess(["admin"]), deleteAdmin);
 
 // Get all admins (excluding soft-deleted records)
-router.get("/", checkRoleAccess(["admin"]), getAllAdmins);
+router.get("/", validateToken, checkRoleAccess(["admin"]), getAllAdmins);
 
 module.exports = router;

@@ -6,29 +6,29 @@ const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 
-
 // @desc   Create a new student record
 // @route  POST /api/students
 exports.createStudent = async (req, res, next) => {
   try {
     const { studentId, semester } = req.body;
-    
+
     // Generate random password before creating student
     const plainPassword = crypto.randomBytes(8).toString("hex");
-    
+
     // Create the student with the plain password
     const student = new Student({
       studentId,
       semester,
       password: plainPassword, // This will be hashed in the pre-save hook
     });
-    
+
     // Save the student to the database
     await student.save();
     logger.info(`[POST /api/students] Created student ID: ${student._id}`);
-    
+
     // Prepare email content with HTML formatting
-    const emailSubject = "🎓 Welcome to Student Portal - Your Login Credentials";
+    const emailSubject =
+      "🎓 Welcome to Student Portal - Your Login Credentials";
     const emailContent = `
       <!DOCTYPE html>
       <html>
@@ -112,8 +112,9 @@ exports.createStudent = async (req, res, next) => {
           }
           .button {
             display: inline-block;
-            background-color: #3b82f6;
-            color: white;
+            color: #f7f7f7;
+            background: rgb(247, 247, 247);
+            border: 2px solid black;
             text-decoration: none;
             padding: 12px 24px;
             border-radius: 8px;
@@ -176,16 +177,16 @@ exports.createStudent = async (req, res, next) => {
             </div>
           </div>
           <div class="email-footer">
-            <p>&copy; ${new Date().getFullYear()} Your University. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()}	Charotar University of Science & Technology (CHARUSAT). All rights reserved.</p>
           </div>
         </div>
       </body>
       </html>
     `;
-    
+
     // Send HTML email with credentials
     await sendEmail(student.email, emailSubject, emailContent, true);
-    
+
     // Respond to the client
     res.status(201).json({
       success: true,
@@ -202,10 +203,11 @@ exports.createStudent = async (req, res, next) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: "A student with the same ID, semester, and year already exists.",
+        message:
+          "A student with the same ID, semester, and year already exists.",
       });
     }
-  
+
     // Handle other errors
     res.status(500).json({
       success: false,
@@ -232,14 +234,21 @@ exports.getStudentById = async (req, res, next) => {
   try {
     // Validate the ID parameter
     if (!mongoose.Types.ObjectId.isValid(req.user._id)) {
-      return res.status(400).json({ success: false, message: "Invalid student ID" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid student ID" });
     }
 
     // Find the student by ID and ensure they are not deleted
-    const student = await Student.findOne({ _id: req.user._id, isDeleted: false }).select("-password");
+    const student = await Student.findOne({
+      _id: req.user._id,
+      isDeleted: false,
+    }).select("-password");
 
     if (!student) {
-      return res.status(404).json({ success: false, message: "Student not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Student not found" });
     }
 
     res.status(200).json({ success: true, data: student });
@@ -253,42 +262,85 @@ exports.getStudentById = async (req, res, next) => {
 // @route  PUT /api/students/:id
 exports.updateStudent = async (req, res, next) => {
   try {
+    const studentId = req.params.id; // Get the student's _id from the URL params
+    const updateData = req.body; // Get the update data from the request body
+
+    // Validate updateData (optional, but recommended)
+    if (!updateData || Object.keys(updateData).length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No data provided to update" });
+    }
+
+    // Check if the password is being updated
+    if (updateData.password) {
+      // Hash the new password
+      updateData.password = await bcrypt.hash(updateData.password, 10);
+    }
+
+    // Find and update the student
     const updatedStudent = await Student.findOneAndUpdate(
-      { _id: req.user._id, isDeleted: false },
-      req.body,
-      { new: true, runValidators: true }
+      { _id: studentId, isDeleted: false }, // Query
+      updateData, // Update data
+      { new: true, runValidators: true } // Options
+    );
+
+    // If no student is found, return a 404 error
+    if (!updatedStudent) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found or has been deleted",
+      });
+    }
+
+    // Return the updated student data
+    res.status(200).json({ success: true, data: updatedStudent });
+  } catch (error) {
+    // Log the error and pass it to the error handler
+    console.error(
+      `[PUT /api/students/${req.params.id}] Error: ${error.message}`,
+      {
+        error,
+      }
+    );
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+  }
+};
+
+// @desc   Update student name, onboarding status, and optionally password
+// @route  PATCH /api/students/:id
+exports.updateStudentName = async (req, res) => {
+  try {
+    const id = req.user._id;
+    const { studentName, isOnboarded, password } = req.body;
+
+    // Prepare update object
+    const updateData = {
+      studentName,
+      isOnboarded,
+    };
+
+    // If password is provided, hash it before updating
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    const updatedStudent = await Student.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true } // Return the updated document
     );
 
     if (!updatedStudent) {
       return res
         .status(404)
         .json({ success: false, message: "Student not found" });
-    }
-
-    res.status(200).json({ success: true, data: updatedStudent });
-  } catch (error) {
-    logger.error(
-      `[PUT /api/students/${req.user._id}] Error: ${error.message}`
-    );
-    next(error);
-  }
-};
-
-// @desc   Update student name and onboarding status
-// @route  PATCH /api/students/:id
-exports.updateStudentName = async (req, res) => {
-  try {
-    const id  = req.user._id;
-    const { studentName, isOnboarded } = req.body;
-
-    const updatedStudent = await Student.findByIdAndUpdate(
-      id,
-      { studentName, isOnboarded },
-      { new: true } // Return the updated document
-    );
-
-    if (!updatedStudent) {
-      return res.status(404).json({ success: false, message: "Student not found" });
     }
 
     res.status(200).json({ success: true, data: updatedStudent });
@@ -303,29 +355,44 @@ exports.updateStudentName = async (req, res) => {
 // @access Private (only the student can change their own password)
 exports.changePassword = async (req, res) => {
   try {
-    const id  = req.user._id;
+    const id = req.user._id; // Ensure this is set correctly
     const { currentPassword, newPassword } = req.body;
+
+    // Validate input
+    if (!currentPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Current password and new password are required",
+        });
+    }
 
     // Find the student by ID
     const student = await Student.findById(id);
     if (!student) {
-      return res.status(404).json({ success: false, message: "Student not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Student not found" });
     }
 
     // Verify the current password
     const isMatch = await student.comparePassword(currentPassword);
     if (!isMatch) {
-      return res.status(400).json({ success: false, message: "Current password is incorrect" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Current password is incorrect" });
     }
-
-    // Hash the new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    console.log("Password comparison result:", isMatch);
 
     // Update the password
-    student.password = hashedPassword;
+    student.password = newPassword;
     await student.save();
+    console.log("Updated student:", student);
 
-    res.status(200).json({ success: true, message: "Password updated successfully" });
+    res
+      .status(200)
+      .json({ success: true, message: "Password updated successfully" });
   } catch (error) {
     console.error("Error changing password:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
@@ -339,12 +406,10 @@ exports.deleteStudent = async (req, res, next) => {
     const student = await Student.findById(req.user._id);
 
     if (!student || student.isDeleted) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "Student not found or already deleted",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "Student not found or already deleted",
+      });
     }
 
     student.isDeleted = true;
@@ -359,5 +424,55 @@ exports.deleteStudent = async (req, res, next) => {
       `[DELETE /api/students/${req.user._id}] Error: ${error.message}`
     );
     next(error);
+  }
+};
+
+// Fetch student by studentId and semester
+exports.fetchStudent = async (req, res) => {
+  try {
+    const { studentId, semester } = req.query;
+
+    if (!studentId || !semester) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "studentId and semester are required",
+        });
+    }
+
+    // Validate semester
+    if (isNaN(semester)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Semester must be a number" });
+    }
+
+    // Convert studentId to lowercase to match the schema
+    const lowercaseStudentId = studentId.toLowerCase();
+
+    // Find the student by studentId and semester
+    const student = await Student.findOne({
+      studentId: lowercaseStudentId,
+      semester: parseInt(semester),
+    });
+
+    if (!student) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Student not found" });
+    }
+
+    // Return the student's data in a consistent structure
+    res.status(200).json({ success: true, data: student });
+  } catch (error) {
+    console.error("Error fetching student data:", error);
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Internal server error",
+        error: error.message,
+      });
   }
 };

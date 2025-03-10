@@ -9,6 +9,7 @@ const {
   updateStudentName,
   deleteStudent,
   changePassword,
+  fetchStudent,
 } = require("../controllers/studentController");
 const {validateToken, checkRoleAccess } = require("../middleware/authMiddleware");
 const validateStudentInput = require("../middleware/validateStudentInput");
@@ -33,5 +34,8 @@ router.patch("/:id", validateToken, checkRoleAccess(["student"]), updateStudentN
 
 // Route for changing password
 router.patch("/change-password/:id", validateToken, checkRoleAccess(["student"]), changePassword);
+
+// Fetch student by studentId and semester
+router.post("/fetch-student", validateToken, checkRoleAccess(["admin"]), fetchStudent);
 
 module.exports = router;
