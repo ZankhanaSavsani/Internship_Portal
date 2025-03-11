@@ -12,6 +12,9 @@ connectDB();
 const app = express();
 app.use(express.json());
 
+// Error handler 
+app.use(errorHandler);
+
 app.set('trust proxy', true);
 
 // Enable CORS for all routes
@@ -34,6 +37,7 @@ const summerInternshipStatusRoutes = require("./routes/summerInternshipStatusRou
 const weeklyReportRoutes = require("./routes/weeklyReportRoutes");
 const downloadRoutes = require('./routes/downloadRoutes');
 const uploadRoutes = require("./routes/uploadRoutes");
+const guideAllocationRoutes = require("./routes/guideAllocationRoutes");
 
 
 // Use Routes
@@ -47,10 +51,7 @@ app.use("/api/summer-internship-completion", summerInternshipCompletionRoutes);
 app.use("/api/weeklyReport", weeklyReportRoutes);
 app.use('/api', downloadRoutes);
 app.use("/api", uploadRoutes);
-
-
-// Error handler 
-app.use(errorHandler);
+app.use("/api/guide-allocation", guideAllocationRoutes);
 
 // Server Listening
 const PORT = process.env.PORT || 5000;

@@ -43,3 +43,4 @@ router.post("/fetch-student", validateToken, checkRoleAccess(["admin"]), fetchSt
 router.patch("/restore/:id", validateToken, checkRoleAccess(["admin"]), restoreStudent);
 
 module.exports = router;
+

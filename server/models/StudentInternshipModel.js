@@ -1,30 +1,22 @@
 const mongoose = require("mongoose");
 
-const internshipGroupSchema = new mongoose.Schema(
+const studentInternshipSchema = new mongoose.Schema(
   {
-    groupName: {
-      type: String,
+    student: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Student",
       required: true,
-      unique: true,
-      trim: true,
-      minLength: 3,
-      maxLength: 50,
-      match: /^[a-zA-Z0-9 ]+$/,
     },
     guide: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Guide",
       required: true,
     },
-    students: [
-      {
-        studentId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Student",
-          required: true,
-        },
-      },
-    ],
+    semester: {
+      type: Number,
+      enum: [5, 7],
+      required: true,
+    },
     weeklyReports: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: "WeeklyReport",
@@ -60,15 +52,18 @@ const internshipGroupSchema = new mongoose.Schema(
 );
 
 // Indexes
-internshipGroupSchema.index({ guide: 1 });
-internshipGroupSchema.index({ "students.studentId": 1 });
+studentInternshipSchema.index({ student: 1, semester: 1 }); // Ensure unique student-semester combination
+studentInternshipSchema.index({ guide: 1 });
 
 // Soft delete pre-hook
-internshipGroupSchema.pre(/^find/, function (next) {
+studentInternshipSchema.pre(/^find/, function (next) {
   this.where({ isDeleted: false });
   next();
 });
 
-const InternshipGroup = mongoose.model("InternshipGroup", internshipGroupSchema);
+const StudentInternship = mongoose.model(
+  "StudentInternship",
+  studentInternshipSchema
+);
 
-module.exports = InternshipGroup;
+module.exports = StudentInternship;

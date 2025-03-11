@@ -28,12 +28,16 @@ import AdminManagementPages from './components/admin/pages/AdminManagementPages'
 import AddAdmin from './components/admin/pages/AddAdmin';
 import EditAdmin from './components/admin/pages/EditAdmin';
 import DeleteAdmin from './components/admin/pages/DeleteAdmin';
+import AdminProfile from "./components/admin/pages/AdminProfile";
+import GuideAllocationForm from "./components/admin/pages/GuideAllocationForm";
+import GuideAllocationList from "./components/admin/pages/GuideAllocationList";
 
 // Auth Components
 import LoginPage from "./components/pages/LoginPage";
 
 import { AuthProvider } from "./components/layouts/AuthProvider";
 import ProtectedRoute from "./components/layouts/ProtectedRoute";
+import WeeklyReport from "./components/admin/pages/WeeklyReport";
 
 function App() {
   return (
@@ -74,6 +78,10 @@ function App() {
             <Route path="/admin/DeleteAdmin" element={<DeleteAdmin />} />
             <Route path="/admin/GuideManagementPages" element={<GuideManagementPages />} />
             <Route path="/admin/AdminManagementPages" element={<AdminManagementPages />} />
+            <Route path="/admin/AdminProfile" element={<AdminProfile />} />
+            <Route path="/admin/WeeklyReport" element={<WeeklyReport />} />
+            <Route path="/admin/GuideAllocationForm" element={<GuideAllocationForm />} />
+            <Route path="/admin/GuideAllocationList" element={<GuideAllocationList />} />
           </Route>
         </Route>
 

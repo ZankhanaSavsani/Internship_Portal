@@ -3,6 +3,8 @@ const Admin = require("../models/AdminModel");
 const logger = require("../utils/logger");
 const { sendEmail } = require("../utils/mailer");
 const crypto = require("crypto"); // For generating random passwords
+const bcrypt = require("bcryptjs");
+const mongoose = require("mongoose");
 
 // @desc   Create a new admin
 // @route  POST /api/admin
@@ -424,5 +426,77 @@ exports.getAllAdmins = async (req, res, next) => {
   } catch (error) {
     logger.error(`[GET /api/admin] Error: ${error.message}`);
     next(error);
+  }
+};
+
+// @desc   Get admin by ID 
+// @route  GET /api/admin/profile
+exports.getAdminById = async (req, res, next) => {
+  try {
+    const id = req.user._id;
+
+    // Validate the ID parameter
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: "Invalid admin ID" });
+    }
+
+    // Find the admin by ID and ensure they are not deleted
+    const admin = await Admin.findOne({ _id: id, isDeleted: false }).select("-password");
+
+    if (!admin) {
+      return res.status(404).json({ success: false, message: "Admin not found" });
+    }
+
+    res.status(200).json({ success: true, data: admin });
+  } catch (error) {
+    logger.error(`[GET /api/admin/${req.user._id}] Error: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc   Change admin password
+// @route  PATCH /api/admins/change-password/:id
+// @access Private (only the admin can change their own password)
+exports.changePassword = async (req, res) => {
+  try {
+    const id = req.user._id; // Ensure this is set correctly
+    const { currentPassword, newPassword } = req.body;
+
+    // Validate input
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password and new password are required",
+      });
+    }
+
+    // Find the admin by ID
+    const admin = await Admin.findById(id);
+    if (!admin) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Admin not found" });
+    }
+
+    // Verify the current password
+    const isMatch = await admin.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Current password is incorrect" });
+    }
+    console.log("Password comparison result:", isMatch);
+
+    // Update the password
+    admin.password = newPassword;
+    await admin.save();
+    console.log("Updated admin:", admin);
+
+    res
+      .status(200)
+      .json({ success: true, message: "Password updated successfully" });
+  } catch (error) {
+    console.error("Error changing password:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };

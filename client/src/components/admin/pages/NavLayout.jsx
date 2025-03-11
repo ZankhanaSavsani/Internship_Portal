@@ -17,8 +17,8 @@ import {
 } from "lucide-react";
 import {
   DropdownMenu,
-  RadixDropdownMenuTrigger,
-  RadixDropdownMenuContent,
+  // RadixDropdownMenuTrigger,
+  // RadixDropdownMenuContent,
   CustomDropdownMenuItem,
   CustomDropdownMenuSeparator,
 } from "../../ui/dropdown-menu";
@@ -62,7 +62,7 @@ const NavLayout = ({ children }) => {
     {
       icon: <ClipboardList size={20} />,
       text: "Weekly Reports",
-      path: "/admin/AddWeeklyReportPage",
+      path: "/admin/WeeklyReport",
     },
     {
       icon: <Users size={20} />,
@@ -79,6 +79,16 @@ const NavLayout = ({ children }) => {
       text: "Manage Admins",
       path: "/admin/AdminManagementPages",
     },
+    {
+      icon: <Shield size={20} />,
+      text: "GuideAllocationForm",
+      path: "/admin/GuideAllocationForm",
+    },
+    {
+      icon: <Shield size={20} />,
+      text: "GuideAllocationList",
+      path: "/admin/GuideAllocationList",
+    },
   ];
 
   const handleLogout = async () => {
@@ -87,7 +97,7 @@ const NavLayout = ({ children }) => {
   };
 
   const handleStudentProfile = () => {
-    navigate("/admin/StudentProfile");
+    navigate("/admin/AdminProfile");
   };
 
   return (

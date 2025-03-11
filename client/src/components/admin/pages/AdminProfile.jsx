@@ -7,20 +7,18 @@ import {
 } from "../../ui/card";
 import { Input } from "../../ui/input";
 import { Button } from "../../ui/button";
-import { Lock, User, Mail, GraduationCap, CalendarDays, IdCard, CheckCircle, Loader2 } from "lucide-react";
+import { Lock, User, Mail, CheckCircle, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "../../ui/alert";
 import axios from "axios";
 import { useAuth } from "../../layouts/AuthProvider";
 
 const AdminProfile = () => {
-  const { user } = useAuth(); // Get the authenticated user from the AuthProvider
-  const [userData, setUserData] = useState({
-    studentId: "",
-    studentName: "",
+  const { user } = useAuth(); // Get the authenticated admin from the AuthProvider
+  const [adminData, setAdminData] = useState({
+    username: "",
+    adminName: "",
     email: "",
-    semester: 0,
-    year: "",
-    guide: "",
+    role: "",
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -33,20 +31,20 @@ const AdminProfile = () => {
   const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Fetch student profile data on component mount
+  // Fetch admin profile data on component mount
   useEffect(() => {
-    const fetchStudentProfile = async () => {
+    const fetchAdminProfile = async () => {
       try {
-        const response = await axios.get(`/api/students/${user._id}`, {
+        const response = await axios.get(`/api/admin/${user._id}`, {
           withCredentials: true,
         });
-        setUserData(response.data.data);
+        setAdminData(response.data.data);
       } catch (error) {
-        console.error("Error fetching student profile:", error);
+        console.error("Error fetching admin profile:", error);
       }
     };
 
-    fetchStudentProfile();
+    fetchAdminProfile();
   }, [user._id]);
 
   // Handle input changes for password fields
@@ -88,7 +86,7 @@ const AdminProfile = () => {
 
     try {
       const response = await axios.patch(
-        `/api/students/change-password/${user._id}`,
+        `/api/admin/change-password/${user._id}`,
         {
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword,
@@ -124,7 +122,7 @@ const AdminProfile = () => {
     </div>
   );
 
-  if (!user.studentName) {
+  if (!user.adminName) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="w-full max-w-md mx-4">
@@ -207,7 +205,7 @@ const AdminProfile = () => {
       <Card className="w-full max-w-2xl mx-auto shadow-xl hover:shadow-2xl transition-shadow duration-300 max-h-[90vh]">
         <CardHeader className="border-b bg-white">
           <CardTitle className="text-2xl font-bold text-gray-800 text-center flex items-center justify-center gap-2">
-            <User className="text-blue-500" /> Student Profile
+            <User className="text-blue-500" /> Admin Profile
           </CardTitle>
         </CardHeader>
 
@@ -224,14 +222,10 @@ const AdminProfile = () => {
             <div className="space-y-2">
               {/* Read-Only Fields */}
               <div className="space-y-1 bg-gray-50 rounded-lg p-1">
-                <InfoField icon={IdCard} label="Student ID" value={userData.studentId} />
-                <InfoField icon={User} label="Student Name" value={userData.studentName} />
-                <InfoField icon={Mail} label="Email" value={userData.email} />
-                <InfoField icon={GraduationCap} label="Semester" value={userData.semester} />
-                <InfoField icon={CalendarDays} label="Year" value={userData.year} />
-                {userData.guide && (
-                  <InfoField icon={User} label="Guide/Mentor" value={userData.guide} />
-                )}
+                <InfoField icon={User} label="Username" value={adminData.username} />
+                <InfoField icon={User} label="Admin Name" value={adminData.adminName} />
+                <InfoField icon={Mail} label="Email" value={adminData.email} />
+                <InfoField icon={User} label="Role" value={adminData.role} />
               </div>
             </div>
           </div>
