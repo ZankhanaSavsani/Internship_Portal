@@ -1,11 +1,15 @@
 const express = require("express");
 const router = express.Router();
-const guideAllocationController = require("../controllers/guideAllocationController");
+const {
+  allocateGuideToRange,
+  getAllGuideAllocations,
+} = require("../controllers/guideAllocationController");
+const {validateToken, checkRoleAccess } = require("../middleware/authMiddleware");
 
 // Allocate guide to a range of students
-router.post("/allocate", guideAllocationController.allocateGuideToRange);
+router.post("/allocate", validateToken, checkRoleAccess(["admin"]), allocateGuideToRange);
 
 // Fetch all guide allocations
-router.get("/allocations", guideAllocationController.getAllGuideAllocations);
+router.get("/allocations", validateToken, checkRoleAccess(["admin"]), getAllGuideAllocations);
 
 module.exports = router;

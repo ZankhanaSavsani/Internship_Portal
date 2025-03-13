@@ -38,6 +38,7 @@ import LoginPage from "./components/pages/LoginPage";
 import { AuthProvider } from "./components/layouts/AuthProvider";
 import ProtectedRoute from "./components/layouts/ProtectedRoute";
 import WeeklyReport from "./components/admin/pages/WeeklyReport";
+import StudentInternshipDetails from "./components/admin/pages/StudentInternshipDetails";
 
 function App() {
   return (
@@ -82,6 +83,8 @@ function App() {
             <Route path="/admin/WeeklyReport" element={<WeeklyReport />} />
             <Route path="/admin/GuideAllocationForm" element={<GuideAllocationForm />} />
             <Route path="/admin/GuideAllocationList" element={<GuideAllocationList />} />
+            <Route path="/admin/StudentInternshipDetails" element={<StudentInternshipDetails />} />
+            
           </Route>
         </Route>
 

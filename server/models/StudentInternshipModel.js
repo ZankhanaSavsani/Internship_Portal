@@ -17,6 +17,10 @@ const studentInternshipSchema = new mongoose.Schema(
       enum: [5, 7],
       required: true,
     },
+    isGuideManuallyAssigned: {
+      type: Boolean,
+      default: false, // Default to false (automatically assigned)
+    },
     weeklyReports: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: "WeeklyReport",
@@ -52,7 +56,7 @@ const studentInternshipSchema = new mongoose.Schema(
 );
 
 // Indexes
-studentInternshipSchema.index({ student: 1, semester: 1 }); // Ensure unique student-semester combination
+studentInternshipSchema.index({ student: 1, semester: 1 }, { unique: true }); // Make it truly unique
 studentInternshipSchema.index({ guide: 1 });
 
 // Soft delete pre-hook
