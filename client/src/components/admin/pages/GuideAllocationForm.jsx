@@ -63,23 +63,49 @@ const GuideAllocationForm = () => {
       setRangeError("Both start and end range are required");
       return false;
     }
+    
+    // Convert to lowercase for validation
+    const startLower = startRange.toLowerCase();
+    const endLower = endRange.toLowerCase();
 
-    // Check if the first 4 characters are the same
-    if (startRange.substring(0, 4) !== endRange.substring(0, 4)) {
+    // Check if the format is correct (like 22cs078 or d23cs108)
+    // This will match both formats: 22cs078 and d23cs108
+    const formatRegex = /^[a-z]?\d{2}[a-z]{2}\d{3}$/;
+    if (!formatRegex.test(startLower) || !formatRegex.test(endLower)) {
+      setRangeError("Range format should be like 22cs078 or d23cs108");
+      return false;
+    }
+
+    // Extract the department prefix (either 1 or 2 characters) + 2 digits + 2 letters
+    // This will handle both "22cs" and "d23cs" formats
+    const getDeptPrefix = (id) => {
+      if (/^[a-z]\d{2}[a-z]{2}/.test(id)) {
+        // Format like d23cs108
+        return id.substring(0, 5);
+      } else {
+        // Format like 22cs078
+        return id.substring(0, 4);
+      }
+    };
+
+    const startPrefix = getDeptPrefix(startLower);
+    const endPrefix = getDeptPrefix(endLower);
+
+    // Check if the prefixes are the same
+    if (startPrefix !== endPrefix) {
       setRangeError("Year and department must be the same in the range");
       return false;
     }
-
-    // Check if the format is correct (like 22cs078)
-    const formatRegex = /^\d{2}[a-z]{2}\d{3}$/i;
-    if (!formatRegex.test(startRange) || !formatRegex.test(endRange)) {
-      setRangeError("Range format should be like 22cs078");
-      return false;
-    }
+    
+    // Extract the numeric part
+    const getNumericPart = (id) => {
+      return parseInt(id.substring(id.length - 3), 10);
+    };
 
     // Check if startRange is less than endRange
-    const startNum = parseInt(startRange.substring(4), 10);
-    const endNum = parseInt(endRange.substring(4), 10);
+    const startNum = getNumericPart(startLower);
+    const endNum = getNumericPart(endLower);
+    
     if (startNum >= endNum) {
       setRangeError("Start range must be less than end range");
       return false;
@@ -91,6 +117,7 @@ const GuideAllocationForm = () => {
 
   // Handle changes in range fields
   const handleRangeChange = (field, value) => {
+    // Store the value as entered (will be converted to lowercase later)
     if (field === "start") {
       setStartRange(value);
     } else {
@@ -118,8 +145,8 @@ const GuideAllocationForm = () => {
       return;
     }
 
-    // Create the range string in the format expected by the API
-    const range = `${startRange}-${endRange}`;
+    // Convert to lowercase and create the range string in the format expected by the API
+    const range = `${startRange.toLowerCase()}-${endRange.toLowerCase()}`;
 
     setIsSubmitting(true);
     setSubmitStatus(null);
@@ -248,7 +275,7 @@ const GuideAllocationForm = () => {
                   value={startRange}
                   onChange={(e) => handleRangeChange("start", e.target.value)}
                   className="w-full p-2 border rounded"
-                  placeholder="e.g., 22cs078"
+                  placeholder="e.g., 22csxxx or d23csxxx"
                   required
                 />
                 <span className="text-gray-500">to</span>
@@ -257,7 +284,7 @@ const GuideAllocationForm = () => {
                   value={endRange}
                   onChange={(e) => handleRangeChange("end", e.target.value)}
                   className="w-full p-2 border rounded"
-                  placeholder="e.g., 22cs082"
+                  placeholder="e.g., 22csxxx or d23csxxx"
                   required
                 />
               </div>

@@ -45,6 +45,7 @@ exports.allocateGuideToRange = async (req, res, next) => {
   const { range, guideId, semester } = req.body;
 
   try {
+    // Parse the range and generate student IDs
     const { year, dept, startDigits, endDigits } = parseStudentIdRange(range);
     const studentIds = generateStudentIds(year, dept, startDigits, endDigits);
 
@@ -58,13 +59,15 @@ exports.allocateGuideToRange = async (req, res, next) => {
     }
 
     // Create or update StudentInternship documents for each student
-    for (const student of students) {
-      await StudentInternship.findOneAndUpdate(
-        { student: student._id, semester },
-        { guide: guideId, semester },
-        { upsert: true }
-      );
-    }
+    const studentInternshipUpdates = students.map((student) => ({
+      updateOne: {
+        filter: { student: student._id, semester, isDeleted: false }, // Ensure not soft-deleted
+        update: { guide: guideId, semester, isDeleted: false }, // Ensure not soft-deleted
+        upsert: true,
+      },
+    }));
+
+    await StudentInternship.bulkWrite(studentInternshipUpdates);
 
     // Determine which students were not found
     const existingStudentIds = students.map((student) => student.studentId);
@@ -72,10 +75,10 @@ exports.allocateGuideToRange = async (req, res, next) => {
       (id) => !existingStudentIds.includes(id)
     );
 
-    // Create a GuideAllocation document
+    // Create or update GuideAllocation document
     const guideAllocation = await GuideAllocation.findOneAndUpdate(
-      { guide: guideId, semester },
-      { range, semester },
+      { guide: guideId, semester, isDeleted: false }, // Ensure not soft-deleted
+      { range, semester, isDeleted: false }, // Ensure not soft-deleted
       { upsert: true, new: true }
     );
 
@@ -85,6 +88,78 @@ exports.allocateGuideToRange = async (req, res, next) => {
       missingStudents: missingStudentIds, // List of student IDs that were not found
     });
   } catch (error) {
+    next(error);
+  }
+};
+
+// Fetch all guide allocations (excluding soft-deleted ones)
+exports.getAllGuideAllocations = async (req, res, next) => {
+  try {
+    const guideAllocations = await GuideAllocation.find({ isDeleted: false }).populate("guide");
+    res.status(200).json({
+      success: true,
+      data: guideAllocations,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete guide allocation for a range (with soft delete and batch deletion)
+exports.deleteGuideAllocation = async (req, res, next) => {
+  const { range, semester } = req.body;
+
+  try {
+    // Parse the range and generate student IDs
+    const { year, dept, startDigits, endDigits } = parseStudentIdRange(range);
+    const studentIds = generateStudentIds(year, dept, startDigits, endDigits);
+
+    // Find the corresponding Student documents
+    const students = await Student.find({ studentId: { $in: studentIds } });
+
+    // Soft delete StudentInternship documents for each student in the range using bulkWrite
+    const studentInternshipUpdates = students.map((student) => ({
+      updateOne: {
+        filter: { student: student._id, semester },
+        update: { $set: { isDeleted: true, deletedAt: new Date() } }, // Soft delete
+      },
+    }));
+
+    await StudentInternship.bulkWrite(studentInternshipUpdates);
+
+    // Soft delete the GuideAllocation document
+    const deletedAllocation = await GuideAllocation.findOneAndUpdate(
+      { range, semester },
+      { $set: { isDeleted: true, deletedAt: new Date() } }, // Soft delete
+      { new: true }
+    );
+
+    if (!deletedAllocation) {
+      return res.status(404).json({
+        success: false,
+        message: "Guide allocation not found.",
+      });
+    }
+
+    // Log the deletion
+    logger.info(`Guide allocation deleted: ${range} for semester ${semester}`, {
+      range,
+      semester,
+      deletedAt: new Date(),
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Guide allocation deleted successfully.",
+      data: deletedAllocation,
+    });
+  } catch (error) {
+    // Log the error
+    logger.error(`Error deleting guide allocation: ${error.message}`, {
+      range,
+      semester,
+      error: error.message,
+    });
     next(error);
   }
 };
