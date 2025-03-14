@@ -2,6 +2,7 @@ const GuideAllocation = require("../models/GuideAllocationModel");
 const Student = require("../models/StudentModel");
 const Guide = require("../models/GuideModel");
 const StudentInternship = require("../models/StudentInternshipModel"); // Import the new model
+const logger = require("../utils/logger");
 
 // Helper function to parse student ID range
 function parseStudentIdRange(range) {
@@ -40,7 +41,6 @@ function generateStudentIds(year, dept, startDigits, endDigits) {
   return studentIds;
 }
 
-// Allocate guide to a range of students
 exports.allocateGuideToRange = async (req, res, next) => {
   const { range, guideId, semester } = req.body;
 
@@ -77,8 +77,8 @@ exports.allocateGuideToRange = async (req, res, next) => {
 
     // Create or update GuideAllocation document
     const guideAllocation = await GuideAllocation.findOneAndUpdate(
-      { guide: guideId, semester, isDeleted: false }, // Ensure not soft-deleted
-      { range, semester, isDeleted: false }, // Ensure not soft-deleted
+      { guide: guideId, semester, range, isDeleted: false }, // Include range in the filter
+      { guide: guideId, semester, range, isDeleted: false }, // Update
       { upsert: true, new: true }
     );
 

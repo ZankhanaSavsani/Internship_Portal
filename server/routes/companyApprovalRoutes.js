@@ -6,21 +6,25 @@ const {
   createCompanyApproval,
   updateCompanyApproval,
   deleteCompanyApproval,
+  updateApprovalStatus,
 } = require("../controllers/companyApprovalController");
 const validateCompanyApproval = require("../middleware/validateCompanyApproval"); // Import the validation middleware
-const { checkRoleAccess } = require("../middleware/authMiddleware");
+const { validateToken, checkRoleAccess } = require("../middleware/authMiddleware");
 
 // Apply validation middleware to POST & PUT routes
-router.post("/", checkRoleAccess(["student"]), validateCompanyApproval, createCompanyApproval);
-router.put("/:id", checkRoleAccess(["student", "admin"]), validateCompanyApproval, updateCompanyApproval);
+router.post("/", validateToken, checkRoleAccess(["student"]), validateCompanyApproval, createCompanyApproval);
+router.put("/:id", validateToken, checkRoleAccess(["student", "admin"]), validateCompanyApproval, updateCompanyApproval);
 
 // GET all approvals
-router.get("/", checkRoleAccess(["admin"]), getAllCompanyApprovals);
+router.get("/", validateToken, checkRoleAccess(["admin"]), getAllCompanyApprovals);
 
 // GET single approval by ID
-router.get("/:id", checkRoleAccess(["student", "guide", "admin"]), getCompanyApprovalById);
+router.get("/:id", validateToken, checkRoleAccess(["student", "guide", "admin"]), getCompanyApprovalById);
 
 // DELETE remove an approval
-router.delete("/:id", checkRoleAccess(["student", "admin"]), deleteCompanyApproval);
+router.delete("/:id", validateToken, checkRoleAccess(["student", "admin"]), deleteCompanyApproval);
+
+// PATCH route to update approval status
+router.patch("/:id", validateToken, checkRoleAccess(["admin"]), updateApprovalStatus);
 
 module.exports = router;

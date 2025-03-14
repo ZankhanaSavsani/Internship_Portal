@@ -15,7 +15,7 @@ app.use(express.json());
 // Error handler 
 app.use(errorHandler);
 
-// app.set('trust proxy', true);
+app.set('trust proxy', true);
 
 // Enable CORS for all routes
 app.use(cors({

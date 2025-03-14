@@ -15,6 +15,6 @@ router.post("/allocate", validateToken, checkRoleAccess(["admin"]), validateRang
 router.get("/allocations", validateToken, checkRoleAccess(["admin"]), getAllGuideAllocations);
 
 // Delete guide allocation for a range
-router.delete("/delete-guide-allocation", checkRoleAccess(["admin"]), deleteGuideAllocation);
+router.delete("/delete-guide-allocation", validateToken, checkRoleAccess(["admin"]), deleteGuideAllocation);
 
 module.exports = router;

@@ -30,7 +30,7 @@ const guideAllocationSchema = new mongoose.Schema(
 );
 
 // Indexes
-guideAllocationSchema.index({ guide: 1, semester: 1 }); // Ensure unique guide-semester combination
+ guideAllocationSchema.index({ guide: 1, semester: 1, range: 1 }); // Ensure unique guide-semester combination
 
 // Soft delete pre-hook
 guideAllocationSchema.pre(/^find/, function (next) {

@@ -9,7 +9,7 @@ const {
   updateInternshipCompletionStatus,
   deleteInternshipCompletionStatus,
 } = require("../controllers/summerInternshipCompletionController");
-const { checkRoleAccess } = require("../middleware/authMiddleware");
+const { validateToken, checkRoleAccess } = require("../middleware/authMiddleware");
 const upload = multer({ dest: "uploads/" }); // Temporary storage for uploaded files
 const {handleMulterErrors} = require("../middleware/multerMiddleware");
 
@@ -38,6 +38,7 @@ const validateFiles = (req, res, next) => {
 // Create internship completion status
 router.post(
   "/",
+  validateToken,
   checkRoleAccess(["student"]),
   upload.fields([
     { name: "stipendProof", maxCount: 1 },
@@ -56,16 +57,18 @@ router.put(
     { name: "stipendProof", maxCount: 1 },
     { name: "completionCertificate", maxCount: 1 },
   ]),
+  validateToken,
   validateInternshipCompletionStatus,
   updateInternshipCompletionStatus
 );
 
 // Get all internship completion statuses
-router.get("/", checkRoleAccess(["admin"]), getAllInternshipCompletionStatuses);
+router.get("/", validateToken, checkRoleAccess(["admin"]), getAllInternshipCompletionStatuses);
 
 // Get a specific internship completion status by ID
 router.get(
   "/:id",
+  validateToken,
   checkRoleAccess(["student", "guide", "admin"]),
   getInternshipCompletionStatusById
 );
@@ -73,6 +76,7 @@ router.get(
 // Delete an internship completion status by ID
 router.delete(
   "/:id",
+  validateToken,
   checkRoleAccess(["student", "admin"]),
   deleteInternshipCompletionStatus
 );

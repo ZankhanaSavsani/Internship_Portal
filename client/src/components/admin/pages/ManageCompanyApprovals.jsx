@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { AlertCircle, CheckCircle, Search, ChevronDown, ChevronUp, X, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import axios from "axios";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../ui/card";
+  AlertCircle,
+  CheckCircle,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  X,
+  AlertTriangle,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "../../ui/card";
 import { Input } from "../../ui/input";
 import { Button } from "../../ui/button";
 import {
@@ -17,35 +20,47 @@ import {
   TableHeader,
   TableRow,
 } from "../../ui/table";
-import { Textarea } from "../../ui/textarea";
+// import { Textarea } from "../../ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
+import RejectionModal from "../RejectionModal"; // Import the RejectionModal component
 
 const ManageCompanyApprovals = () => {
   const [approvals, setApprovals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
-  const [companySearch, setCompanySearch] = useState('');
-  const [studentSearch, setStudentSearch] = useState('');
-  const [sortField, setSortField] = useState('createdAt');
-  const [sortOrder, setSortOrder] = useState('desc');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [companySearch, setCompanySearch] = useState("");
+  const [studentSearch, setStudentSearch] = useState("");
+  const [sortField, setSortField] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [statusFilter, setStatusFilter] = useState("");
   const [total, setTotal] = useState(0);
-  
+
   // State for rejection modal
   const [showRejectionModal, setShowRejectionModal] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectionReason, setRejectionReason] = useState("");
   const [currentApprovalId, setCurrentApprovalId] = useState(null);
-  
+
   // State for viewing detailed approval info
   const [selectedApproval, setSelectedApproval] = useState(null);
-  
+
   // State for error handling
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const fetchApprovals = async () => {
+  // State for rejection reason in details modal
+  const [showRejectionReasonInput, setShowRejectionReasonInput] =
+    useState(false);
+  const [detailsRejectionReason, setDetailsRejectionReason] =
+    React.useState("");
+
+  // Ref for print view
+  const printRef = useRef();
+
+  const rejectionReasonRef = React.useRef(null);
+  const textareaRef = React.useRef(null);
+  const fetchApprovals = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -56,32 +71,34 @@ const ManageCompanyApprovals = () => {
       });
 
       if (companySearch) {
-        params.append('companyName', companySearch);
+        params.append("companyName", companySearch);
       }
 
       if (studentSearch) {
-        params.append('studentName', studentSearch);
+        params.append("studentName", studentSearch);
       }
 
       if (statusFilter) {
-        params.append('status', statusFilter);
+        params.append("status", statusFilter);
       }
 
-      const response = await axios.get(`/api/company-approvals?${params.toString()}`);
+      const response = await axios.get(
+        `/api/company-approvals?${params.toString()}`
+      );
       setApprovals(response.data.data);
       setTotalPages(response.data.pages);
       setTotal(response.data.total);
     } catch (error) {
-      console.error('Error fetching approvals:', error);
-      setError('Failed to load approvals. Please try again later.');
+      console.error("Error fetching approvals:", error);
+      setError("Failed to load approvals. Please try again later.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, sortField, sortOrder, companySearch, studentSearch, statusFilter]);
 
   useEffect(() => {
     fetchApprovals();
-  }, [page, sortField, sortOrder, companySearch, studentSearch, statusFilter]);
+  }, [fetchApprovals]);
 
   // Clear notifications after some time
   useEffect(() => {
@@ -90,82 +107,96 @@ const ManageCompanyApprovals = () => {
         setError(null);
         setSuccess(null);
       }, 5000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [error, success]);
 
   const handleSort = (field) => {
     if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortOrder('asc');
+      setSortOrder("asc");
     }
   };
 
   const openRejectionModal = (id) => {
     setCurrentApprovalId(id);
-    setRejectionReason('');
+    setRejectionReason("");
     setShowRejectionModal(true);
   };
 
   const closeRejectionModal = () => {
     setShowRejectionModal(false);
     setCurrentApprovalId(null);
+    setRejectionReason("");
   };
 
   const submitRejection = async () => {
     if (rejectionReason.trim()) {
-      await handleUpdateStatus(currentApprovalId, 'Rejected', rejectionReason);
+      await handleUpdateStatus(currentApprovalId, "Rejected", rejectionReason);
       closeRejectionModal();
     }
   };
-  
+
   const handleViewDetails = (approval) => {
     setSelectedApproval(approval);
   };
-  
+
   const handleCloseDetailsModal = () => {
     setSelectedApproval(null);
   };
 
-  const handleUpdateStatus = async (id, newStatus, rejectionReason = null) => {
+  const handleUpdateStatus = async (id, status, reason = null) => {
     try {
       setActionLoading(true);
       setError(null);
-      
+
       const updateData = {
-        approvalStatus: newStatus
+        approvalStatus: status,
       };
-      
-      if (rejectionReason && newStatus === 'Rejected') {
-        updateData.rejectionReason = rejectionReason;
+
+      if (reason && status === "Rejected") {
+        updateData.rejectionReason = reason;
       }
-      
-      const response = await axios.put(`/api/company-approvals/${id}`, updateData);
-      
+
+      const response = await axios.patch(
+        `/api/company-approvals/${id}`,
+        updateData
+      );
+
       // Optimistically update the UI
-      setApprovals(prevApprovals => 
-        prevApprovals.map(approval => 
-          approval._id === id ? { ...approval, approvalStatus: newStatus } : approval
+      setApprovals((prevApprovals) =>
+        prevApprovals.map((approval) =>
+          approval._id === id
+            ? { ...approval, approvalStatus: status, rejectionReason: reason }
+            : approval
         )
       );
-      
+
       // Show success message
-      setSuccess(`Successfully ${newStatus.toLowerCase()} the company approval request.`);
-      
+      setSuccess(
+        `Successfully ${status.toLowerCase()} the company approval request.`
+      );
+
       // If we're in the details modal, close it
       if (selectedApproval && selectedApproval._id === id) {
-        setSelectedApproval({...selectedApproval, approvalStatus: newStatus});
+        setSelectedApproval({
+          ...selectedApproval,
+          approvalStatus: status,
+          rejectionReason: reason,
+        });
       }
-      
+
       // Refresh data
       await fetchApprovals();
-      
     } catch (error) {
-      console.error('Error updating status:', error);
-      setError(error.response?.data?.message || 'Failed to update status. Please try again.');
+      console.error("Error updating status:", error);
+      setError(
+        error.response?.data?.message ||
+          "Failed to update status. Please try again."
+      );
     } finally {
       setActionLoading(false);
     }
@@ -173,159 +204,696 @@ const ManageCompanyApprovals = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Approved': return 'bg-green-100 text-green-800';
-      case 'Rejected': return 'bg-red-100 text-red-800';
-      case 'Pending': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "Approved":
+        return "bg-green-100 text-green-800";
+      case "Rejected":
+        return "bg-red-100 text-red-800";
+      case "Pending":
+        return "bg-yellow-100 text-yellow-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const SortIcon = ({ field }) => {
-    if (sortField !== field) return <ChevronDown className="w-4 h-4 text-gray-400" />;
-    return sortOrder === 'asc' ? 
-      <ChevronUp className="w-4 h-4" /> : 
-      <ChevronDown className="w-4 h-4" />;
-  };
-
-  // Rejection Modal Component
-  const RejectionModal = () => {
-    if (!showRejectionModal) return null;
-    
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn">
-        <div className="bg-white rounded-lg shadow-xl p-6 m-4 max-w-md w-full transform transition-all animate-scaleIn">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900">Rejection Reason</h3>
-            <button onClick={closeRejectionModal} className="text-gray-400 hover:text-gray-500 transition-colors">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          
-          <div className="mb-4">
-            <p className="text-sm text-gray-500 mb-2">Please provide a reason for rejecting this company approval request.</p>
-            <Textarea
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="Enter rejection reason..."
-              className="w-full h-24 transition-all focus:border-blue-500 focus:ring focus:ring-blue-200"
-              autoFocus
-            />
-          </div>
-          
-          <div className="flex justify-end gap-2 mt-4">
-            <Button 
-              variant="outline" 
-              onClick={closeRejectionModal}
-              className="transition-all hover:bg-gray-100"
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={submitRejection}
-              disabled={!rejectionReason.trim() || actionLoading}
-              className="transition-all"
-            >
-              {actionLoading ? 'Processing...' : 'Reject Request'}
-            </Button>
-          </div>
-        </div>
-      </div>
+    if (sortField !== field)
+      return <ChevronDown className="w-4 h-4 text-gray-400" />;
+    return sortOrder === "asc" ? (
+      <ChevronUp className="w-4 h-4" />
+    ) : (
+      <ChevronDown className="w-4 h-4" />
     );
   };
-  
+
+  // Function to export data to CSV
+  const exportToCSV = () => {
+    if (approvals.length === 0) return;
+
+    // Define CSV headers
+    const headers = [
+      "S.No",
+      "Company Name",
+      "Student",
+      "Date Submitted",
+      "Status",
+    ];
+
+    // Map data to CSV rows
+    const data = approvals.map((approval, index) => [
+      index + 1,
+      approval.companyName,
+      approval.studentName || approval.student?.name || "N/A",
+      new Date(approval.createdAt).toLocaleDateString(),
+      approval.approvalStatus,
+    ]);
+
+    // Combine headers and data
+    const csvContent = [
+      headers.join(","),
+      ...data.map((row) => row.join(",")),
+    ].join("\n");
+
+    // Create a blob and download link
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `company_approvals_${new Date().toISOString().split("T")[0]}.csv`
+    );
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Function to handle print view
+  const handlePrint = () => {
+    const printContent = document.getElementById("printArea");
+    const originalContents = document.body.innerHTML;
+
+    // Create a styled print version
+    const printStyles = `
+      <style>
+        body { font-family: Arial, sans-serif; }
+        h1 { color: #1e40af; text-align: center; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background-color: #e5e7eb; color: #4b5563; font-weight: bold; text-align: left; padding: 10px; }
+        td { padding: 10px; border-bottom: 1px solid #e5e7eb; }
+        .print-header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .print-date { text-align: right; color: #6b7280; }
+        .print-footer { margin-top: 30px; text-align: center; color: #6b7280; font-size: 12px; }
+      </style>
+    `;
+
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Company Approvals - Print View</title>
+          ${printStyles}
+        </head>
+        <body>
+          <div class="print-header">
+            <h1>Company Approvals</h1>
+            <div class="print-date">Generated: ${new Date().toLocaleString()}</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Company Name</th>
+                <th>Student</th>
+                <th>Date Submitted</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${approvals
+                .map(
+                  (approval, index) => `
+                <tr>
+                  <td>${index + 1}</td>
+                  <td>${approval.companyName}</td>
+                  <td>${
+                    approval.studentName || approval.student?.name || "N/A"
+                  }</td>
+                  <td>${new Date(approval.createdAt).toLocaleDateString()}</td>
+                  <td>${approval.approvalStatus}</td>
+                </tr>
+              `
+                )
+                .join("")}
+            </tbody>
+          </table>
+          <div class="print-footer">
+            <p>© ${new Date().getFullYear()} Company Approvals System. All rights reserved.</p>
+          </div>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+
+    // Add slight delay to ensure content is fully loaded
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
+  };
+
   // Details Modal Component
   const DetailsModal = () => {
-    if (!selectedApproval) return null;
+    React.useEffect(() => {
+      if (showRejectionReasonInput && textareaRef.current) {
+        textareaRef.current.focus();
+      }
+    }, [showRejectionReasonInput]);
+
+    useEffect(() => {
+      if (textareaRef.current) {
+        const length = detailsRejectionReason.length;
+        textareaRef.current.setSelectionRange(length, length);
+      }
+    }, [detailsRejectionReason]);
     
+
+    if (!selectedApproval) return null;
+
+    const handleRejectClick = () => {
+      if (showRejectionReasonInput && detailsRejectionReason.trim()) {
+        // If rejection reason is provided, submit the rejection
+        handleUpdateStatus(
+          selectedApproval._id,
+          "Rejected",
+          detailsRejectionReason
+        );
+        setShowRejectionReasonInput(false); // Hide the input field after submission
+        setDetailsRejectionReason(""); // Clear the rejection reason
+      } else {
+        // If rejection reason input is not visible, show it
+        setShowRejectionReasonInput(true);
+      }
+    };
+
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 animate-fadeIn">
-        <div className="bg-white rounded-lg w-full max-w-2xl mx-4 animate-scaleIn">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">{selectedApproval.companyName}</h2>
-            <p className="text-gray-500">Company Approval Request by {selectedApproval.studentName || selectedApproval.student?.name || 'N/A'}</p>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-800/70 backdrop-blur-sm overflow-y-auto py-10 transition-all duration-300">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 transform transition-all duration-300 border border-slate-200">
+          {/* Header */}
+          <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-blue-50 to-white">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800">
+                {selectedApproval.companyName}
+              </h2>
+              <p className="text-slate-500 mt-1 flex items-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 mr-1"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+                Company Approval Request by{" "}
+                <span className="font-medium text-slate-700 ml-1">
+                  {selectedApproval.studentName ||
+                    selectedApproval.student?.name ||
+                    "N/A"}
+                </span>
+              </p>
+            </div>
           </div>
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Request Information</h4>
+          {/* Body */}
+          <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto bg-slate-50/50">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Request Information */}
+              <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-md hover:shadow-lg transition-shadow duration-300">
+                <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center border-b border-slate-200 pb-3">
+                  <span className="mr-2 bg-blue-100 p-1.5 rounded-full">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 text-blue-500"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                  Request Information
+                </h4>
                 <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Company</p>
-                    <p className="font-medium text-gray-900">{selectedApproval.companyName}</p>
+                  <div className="group hover:bg-blue-50 p-3 rounded-md transition-colors duration-200">
+                    <p className="text-sm text-slate-500 group-hover:text-blue-600 font-semibold">
+                      Company
+                    </p>
+                    <p className="font-medium text-slate-800 mt-1">
+                      {selectedApproval.companyName}
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Student</p>
-                    <p className="font-medium text-gray-900">{selectedApproval.studentName || selectedApproval.student?.name || 'N/A'}</p>
+                  <div className="group hover:bg-blue-50 p-3 rounded-md transition-colors duration-200">
+                    <p className="text-sm text-slate-500 group-hover:text-blue-600 font-semibold">
+                      Student
+                    </p>
+                    <p className="font-medium text-slate-800 mt-1">
+                      {selectedApproval.studentName ||
+                        selectedApproval.student?.name ||
+                        "N/A"}
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Date Submitted</p>
-                    <p className="font-medium text-gray-900">{new Date(selectedApproval.createdAt).toLocaleDateString()}</p>
+                  <div className="group hover:bg-blue-50 p-3 rounded-md transition-colors duration-200">
+                    <p className="text-sm text-slate-500 group-hover:text-blue-600 font-semibold">
+                      Date Submitted
+                    </p>
+                    <p className="font-medium text-slate-800 mt-1">
+                      {new Date(selectedApproval.createdAt).toLocaleDateString(
+                        "en-US",
+                        { year: "numeric", month: "long", day: "numeric" }
+                      )}
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Status</p>
-                    <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedApproval.approvalStatus)}`}>
+                  <div className="group hover:bg-blue-50 p-3 rounded-md transition-colors duration-200">
+                    <p className="text-sm text-slate-500 group-hover:text-blue-600 font-semibold">
+                      Status
+                    </p>
+                    <span
+                      className={`px-3 py-1.5 text-xs font-bold rounded-full inline-flex items-center mt-1 ${getStatusColor(
+                        selectedApproval.approvalStatus
+                      )}`}
+                    >
+                      <span className="w-2 h-2 rounded-full mr-1.5 bg-current opacity-70"></span>
                       {selectedApproval.approvalStatus}
                     </span>
                   </div>
                 </div>
               </div>
-              <div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Company Details</h4>
+
+              {/* Company Details */}
+              <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-md hover:shadow-lg transition-shadow duration-300">
+                <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center border-b border-slate-200 pb-3">
+                  <span className="mr-2 bg-blue-100 p-1.5 rounded-full">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 text-blue-500"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4zm3 1h6v4H7V5zm8 8v2h1v1H4v-1h1v-2a1 1 0 011-1h8a1 1 0 011 1zM9 5v4h2V5H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                  Company Details
+                </h4>
                 <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Industry</p>
-                    <p className="text-gray-900">{selectedApproval.industry || 'N/A'}</p>
+                  <div className="group hover:bg-blue-50 p-3 rounded-md transition-colors duration-200">
+                    <p className="text-sm text-slate-500 group-hover:text-blue-600 font-semibold">
+                      Company Website
+                    </p>
+                    <p className="text-slate-800 break-words mt-1">
+                      {selectedApproval.companyWebsite ? (
+                        <a
+                          href={selectedApproval.companyWebsite}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline"
+                        >
+                          {selectedApproval.companyWebsite}
+                        </a>
+                      ) : (
+                        "N/A"
+                      )}
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Location</p>
-                    <p className="text-gray-900">{selectedApproval.location || 'N/A'}</p>
+                  <div className="group hover:bg-blue-50 p-3 rounded-md transition-colors duration-200">
+                    <p className="text-sm text-slate-500 group-hover:text-blue-600 font-semibold">
+                      Company Address
+                    </p>
+                    <p className="text-slate-800 mt-1">
+                      {selectedApproval.companyAddress || "N/A"}
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Company Size</p>
-                    <p className="text-gray-900">{selectedApproval.companySize || 'N/A'}</p>
+                  <div className="group hover:bg-blue-50 p-3 rounded-md transition-colors duration-200">
+                    <p className="text-sm text-slate-500 group-hover:text-blue-600 font-semibold">
+                      Number of Employees
+                    </p>
+                    <p className="text-slate-800 mt-1">
+                      {selectedApproval.numberOfEmployees || "N/A"}
+                    </p>
+                  </div>
+                  <div className="group hover:bg-blue-50 p-3 rounded-md transition-colors duration-200">
+                    <p className="text-sm text-slate-500 group-hover:text-blue-600 font-semibold">
+                      Stipend Amount
+                    </p>
+                    <p className="text-slate-800 font-medium mt-1">
+                      {selectedApproval.stipendAmount ? (
+                        <span className="text-emerald-600 font-bold">
+                          {selectedApproval.stipendAmount}
+                        </span>
+                      ) : (
+                        "N/A"
+                      )}
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
-            {selectedApproval.description && (
-              <div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Company Description</h4>
-                <p className="text-gray-900">{selectedApproval.description}</p>
+
+            {/* Additional Details */}
+            <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-md hover:shadow-lg transition-shadow duration-300">
+              <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center border-b border-slate-200 pb-3">
+                <span className="mr-2 bg-blue-100 p-1.5 rounded-full">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 text-blue-500"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                  </svg>
+                </span>
+                Additional Information
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <div className="space-y-4">
+                    <div className="group hover:bg-blue-50 p-3 rounded-md transition-colors duration-200">
+                      <p className="text-sm text-slate-500 group-hover:text-blue-600 font-semibold">
+                        HR Details
+                      </p>
+                      <div className="text-slate-800 p-4 bg-slate-50 rounded-lg border border-slate-200 mt-2 shadow-sm">
+                        <p className="mb-2">
+                          <span className="font-semibold text-slate-600">
+                            Name:
+                          </span>{" "}
+                          {selectedApproval.hrDetails?.name || "N/A"}
+                        </p>
+                        <p className="mb-2">
+                          <span className="font-semibold text-slate-600">
+                            Phone:
+                          </span>{" "}
+                          {selectedApproval.hrDetails?.phone ? (
+                            <a
+                              href={`tel:${selectedApproval.hrDetails.phone}`}
+                              className="text-blue-600 hover:underline"
+                            >
+                              {selectedApproval.hrDetails.phone}
+                            </a>
+                          ) : (
+                            "N/A"
+                          )}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-slate-600">
+                            Email:
+                          </span>{" "}
+                          {selectedApproval.hrDetails?.email ? (
+                            <a
+                              href={`mailto:${selectedApproval.hrDetails.email}`}
+                              className="text-blue-600 hover:underline"
+                            >
+                              {selectedApproval.hrDetails.email}
+                            </a>
+                          ) : (
+                            "N/A"
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="group hover:bg-blue-50 p-3 rounded-md transition-colors duration-200">
+                      <p className="text-sm text-slate-500 group-hover:text-blue-600 font-semibold">
+                        Technologies
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {selectedApproval.technologies?.length > 0 ? (
+                          selectedApproval.technologies?.map((tech, idx) => (
+                            <span
+                              key={idx}
+                              className="px-3 py-1.5 bg-blue-50 text-blue-700 text-xs font-bold rounded-full border border-blue-200 shadow-sm"
+                            >
+                              {tech}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-slate-600">N/A</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div className="space-y-4">
+                    <div className="group hover:bg-blue-50 p-3 rounded-md transition-colors duration-200">
+                      <p className="text-sm text-slate-500 group-hover:text-blue-600 font-semibold">
+                        Current Project
+                      </p>
+                      <p className="text-slate-800 mt-2 p-2 bg-slate-50 rounded-md border border-slate-200">
+                        {selectedApproval.currentProject || "N/A"}
+                      </p>
+                    </div>
+                    <div className="group hover:bg-blue-50 p-3 rounded-md transition-colors duration-200">
+                      <p className="text-sm text-slate-500 group-hover:text-blue-600 font-semibold">
+                        Clients
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {selectedApproval.clients?.length > 0 ? (
+                          selectedApproval.clients?.map((client, idx) => (
+                            <span
+                              key={idx}
+                              className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full border border-emerald-200 shadow-sm"
+                            >
+                              {client}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-slate-600">N/A</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="group hover:bg-blue-50 p-3 rounded-md transition-colors duration-200">
+                      <p className="text-sm text-slate-500 group-hover:text-blue-600 font-semibold">
+                        Source of Company
+                      </p>
+                      <p className="text-slate-800 mt-2 p-2 bg-slate-50 rounded-md border border-slate-200">
+                        {selectedApproval.sourceOfCompany || "N/A"}
+                      </p>
+                    </div>
+                    <div className="group hover:bg-blue-50 p-3 rounded-md transition-colors duration-200">
+                      <p className="text-sm text-slate-500 group-hover:text-blue-600 font-semibold">
+                        Reason to Choose
+                      </p>
+                      <p className="text-slate-800 mt-2 p-2 bg-slate-50 rounded-md border border-slate-200">
+                        {selectedApproval.reasonToChoose || "N/A"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
+
+            {/* Branches Section */}
+            {selectedApproval.branches &&
+              selectedApproval.branches.length > 0 && (
+                <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-md hover:shadow-lg transition-shadow duration-300">
+                  <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center border-b border-slate-200 pb-3">
+                    <span className="mr-2 bg-blue-100 p-1.5 rounded-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 text-blue-500"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                    Branches
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {selectedApproval.branches.map((branch, index) => (
+                      <div
+                        key={index}
+                        className="p-4 bg-slate-50 rounded-lg border border-slate-200 hover:bg-white hover:shadow-md transition-all duration-200 flex items-center"
+                      >
+                        <span className="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold mr-3">
+                          {index + 1}
+                        </span>
+                        <div>
+                          <p className="text-sm text-slate-500 font-semibold">
+                            Branch Location
+                          </p>
+                          <p className="text-slate-800 font-medium">
+                            {branch.location}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            {/* Rejection Reason */}
             {selectedApproval.rejectionReason && (
-              <div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Rejection Reason</h4>
-                <div className="p-4 bg-red-50 border border-red-100 rounded-md text-red-800">
+              <div className="bg-rose-50 p-5 rounded-lg border border-rose-200 shadow-md">
+                <h4 className="text-lg font-semibold text-rose-700 mb-4 flex items-center border-b border-rose-200 pb-3">
+                  <span className="mr-2 bg-rose-100 p-1.5 rounded-full">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 text-rose-600"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                  Rejection Reason
+                </h4>
+                <div className="p-4 bg-white rounded-lg text-rose-700 border border-rose-200 shadow-sm">
                   {selectedApproval.rejectionReason}
                 </div>
               </div>
             )}
           </div>
-          <div className="p-6 border-t border-gray-200 flex justify-end gap-4">
-            {selectedApproval.approvalStatus === 'Pending' && (
+
+          {/* Footer */}
+          <div className="p-6 border-t border-slate-200 flex flex-wrap items-center justify-end gap-4 bg-slate-50">
+            {selectedApproval.approvalStatus === "Pending" && (
               <>
+                {/* Reject Button */}
                 <Button
-                  onClick={() => handleUpdateStatus(selectedApproval._id, 'Rejected')}
-                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+                  onClick={handleRejectClick}
+                  className="px-5 py-2.5 text-sm font-medium text-white bg-rose-500 hover:bg-rose-600 focus:ring-4 focus:ring-rose-100 rounded-lg transition-all duration-200 flex items-center shadow-sm"
                   disabled={actionLoading}
                 >
+                  {actionLoading ? (
+                    <svg
+                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M6 18L18 6M6 6l12 12"
+                      ></path>
+                    </svg>
+                  )}
                   Reject
                 </Button>
+
+                {/* Rejection Reason Input */}
+                {showRejectionReasonInput && (
+                  <div className="w-full">
+                    <textarea
+                      ref={textareaRef}
+                      value={detailsRejectionReason}
+                      onChange={(e) => {
+                        setDetailsRejectionReason(e.target.value);
+                      }}
+                      placeholder="Enter rejection reason..."
+                      className="w-full p-4 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 shadow-sm text-slate-700 resize-none"
+                      rows={3}
+                      dir="ltr"
+                    />
+                    <p className="mt-2 text-xs text-slate-500">
+                      Please provide a detailed reason for rejection that will
+                      be shared with the student.
+                    </p>
+                  </div>
+                )}
+
+                {/* Approve Button */}
                 <Button
-                  onClick={() => handleUpdateStatus(selectedApproval._id, 'Approved')}
-                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors"
+                  onClick={() =>
+                    handleUpdateStatus(selectedApproval._id, "Approved")
+                  }
+                  className="px-5 py-2.5 text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 focus:ring-4 focus:ring-emerald-100 rounded-lg transition-all duration-200 flex items-center shadow-sm"
                   disabled={actionLoading}
                 >
+                  {actionLoading ? (
+                    <svg
+                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M5 13l4 4L19 7"
+                      ></path>
+                    </svg>
+                  )}
                   Approve
                 </Button>
               </>
             )}
+
+            {/* Close Button */}
             <Button
               onClick={handleCloseDetailsModal}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+              className="px-5 py-2.5 text-sm font-medium text-slate-700 bg-white hover:bg-slate-100 focus:ring-4 focus:ring-slate-100 rounded-lg transition-all duration-200 flex items-center shadow-sm border border-slate-300"
             >
+              <svg
+                className="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18L18 6M6 6l12 12"
+                ></path>
+              </svg>
               Close
             </Button>
           </div>
@@ -335,293 +903,338 @@ const ManageCompanyApprovals = () => {
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader className="bg-white rounded-t-lg border-b border-gray-200">
-        <CardTitle className="text-2xl font-semibold text-gray-900">Company Approvals Management</CardTitle>
-        <p className="text-gray-500 mt-1">Manage and review company approval requests</p>
-      </CardHeader>
-      <CardContent className="p-6">
-        {/* Notification Area */}
-        {error && (
-          <Alert variant="destructive" className="mb-4 animate-slideDown">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-            <button 
-              onClick={() => setError(null)} 
-              className="absolute top-2 right-2 text-red-800 hover:text-red-900"
-              aria-label="Dismiss"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </Alert>
-        )}
-        
-        {success && (
-          <Alert className="mb-4 bg-green-50 text-green-800 border-green-200 animate-slideDown">
-            <CheckCircle className="h-4 w-4" />
-            <AlertTitle>Success</AlertTitle>
-            <AlertDescription>{success}</AlertDescription>
-            <button 
-              onClick={() => setSuccess(null)} 
-              className="absolute top-2 right-2 text-green-800 hover:text-green-900"
-              aria-label="Dismiss"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </Alert>
-        )}
+    <div className="min-h-screen bg-gray-50 p-8">
+      <Card className="w-full max-w-6xl mx-auto">
+        <CardHeader>
+          <CardTitle className="text-center text-xl text-gray-700">
+            Company Approvals Management
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Notification Area */}
+          {error && (
+            <Alert variant="destructive" className="mb-4 animate-slideDown">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+              <button
+                onClick={() => setError(null)}
+                className="absolute top-2 right-2 text-red-800 hover:text-red-900"
+                aria-label="Dismiss"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </Alert>
+          )}
 
-        {/* Filter Controls */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+          {success && (
+            <Alert className="mb-4 bg-green-50 text-green-800 border-green-200 animate-slideDown">
+              <CheckCircle className="h-4 w-4" />
+              <AlertTitle>Success</AlertTitle>
+              <AlertDescription>{success}</AlertDescription>
+              <button
+                onClick={() => setSuccess(null)}
+                className="absolute top-2 right-2 text-green-800 hover:text-green-900"
+                aria-label="Dismiss"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </Alert>
+          )}
+
+          {/* Filter Controls */}
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+                <Input
+                  placeholder="Search by company name..."
+                  value={companySearch}
+                  onChange={(e) => setCompanySearch(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+            <div className="flex-1">
               <Input
-                placeholder="Search by company name..."
-                value={companySearch}
-                onChange={(e) => setCompanySearch(e.target.value)}
-                className="pl-8"
+                placeholder="Search by student name..."
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
               />
             </div>
+            <div className="mt-4 flex flex-wrap gap-2 md:mt-0">
+              {["", "Pending", "Approved", "Rejected"].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    statusFilter === status
+                      ? "bg-indigo-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {status || "All Status"}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex-1">
-            <Input
-              placeholder="Search by student name..."
-              value={studentSearch}
-              onChange={(e) => setStudentSearch(e.target.value)}
-            />
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2 md:mt-0">
-            {['', 'Pending', 'Approved', 'Rejected'].map((status) => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  statusFilter === status
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {status || 'All Status'}
-              </button>
-            ))}
-          </div>
-        </div>
 
-        {/* Table */}
-        <div className="border rounded-md overflow-hidden shadow-sm">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50">
-                <TableHead 
-                  className="cursor-pointer hover:bg-gray-100 transition-colors"
-                  onClick={() => handleSort('companyName')}
-                >
-                  <div className="flex items-center">
-                    Company Name
-                    <SortIcon field="companyName" />
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-gray-100 transition-colors"
-                  onClick={() => handleSort('studentName')}
-                >
-                  <div className="flex items-center">
-                    Student
-                    <SortIcon field="studentName" />
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-gray-100 transition-colors"
-                  onClick={() => handleSort('createdAt')}
-                >
-                  <div className="flex items-center">
-                    Date
-                    <SortIcon field="createdAt" />
-                  </div>
-                </TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12">
-                    <div className="flex justify-center items-center">
-                      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600 mr-3"></div>
-                      <span className="text-lg font-medium text-gray-700">Loading...</span>
+          {/* Table */}
+          <div
+            className="border rounded-md overflow-hidden shadow-sm"
+            id="printArea"
+            ref={printRef}
+          >
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead
+                    className="cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort("companyName")}
+                  >
+                    <div className="flex items-center">
+                      Company Name
+                      <SortIcon field="companyName" />
                     </div>
-                  </TableCell>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort("studentName")}
+                  >
+                    <div className="flex items-center">
+                      Student
+                      <SortIcon field="studentName" />
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort("createdAt")}
+                  >
+                    <div className="flex items-center">
+                      Date
+                      <SortIcon field="createdAt" />
+                    </div>
+                  </TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ) : approvals.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12">
-                    <AlertTriangle className="mx-auto h-12 w-12 text-yellow-500 mb-3" />
-                    <p className="text-lg font-medium text-gray-700">No approvals found</p>
-                    <p className="text-gray-500 mt-1">Try changing your search or filters</p>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                approvals.map((approval) => (
-                  <TableRow key={approval._id} className="hover:bg-gray-50 transition-colors">
-                    <TableCell className="font-medium">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 flex-shrink-0 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-sm font-semibold mr-3">
-                          {approval.companyName.charAt(0)}
-                        </div>
-                        <span>{approval.companyName}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {approval.studentName || approval.student?.name || 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(approval.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium ${getStatusColor(approval.approvalStatus)}`}>
-                        {approval.approvalStatus === 'Approved' ? (
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                        ) : approval.approvalStatus === 'Rejected' ? (
-                          <AlertCircle className="w-4 h-4 mr-1" />
-                        ) : (
-                          <AlertTriangle className="w-4 h-4 mr-1" />
-                        )}
-                        {approval.approvalStatus}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {approval.approvalStatus === 'Pending' && (
-                          <>
-                            <Button
-                              size="sm"
-                              onClick={() => handleUpdateStatus(approval._id, 'Approved')}
-                              disabled={actionLoading}
-                              className="bg-green-600 hover:bg-green-700 text-white transition-colors"
-                            >
-                              {actionLoading && currentApprovalId === approval._id ? 
-                                <span className="flex items-center">
-                                  <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></span> 
-                                  Processing
-                                </span> : 'Approve'}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => openRejectionModal(approval._id)}
-                              disabled={actionLoading}
-                              className="transition-colors hover:bg-red-700"
-                            >
-                              Reject
-                            </Button>
-                          </>
-                        )}
-                        {(approval.approvalStatus === 'Approved' || approval.approvalStatus === 'Rejected') && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleUpdateStatus(approval._id, 'Pending')}
-                            disabled={actionLoading}
-                            className="hover:bg-gray-100 transition-colors"
-                          >
-                            Reset
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleViewDetails(approval)}
-                          className="hover:bg-gray-200 transition-colors"
-                        >
-                          View Details
-                        </Button>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-12">
+                      <div className="flex justify-center items-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600 mr-3"></div>
+                        <span className="text-lg font-medium text-gray-700">
+                          Loading...
+                        </span>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Pagination */}
-        <div className="flex justify-between items-center mt-6">
-          <div className="text-sm text-gray-700">
-            Showing {(page - 1) * 10 + 1} to {Math.min(page * 10, total)} of {total} entries
+                ) : approvals.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-12">
+                      <AlertTriangle className="mx-auto h-12 w-12 text-yellow-500 mb-3" />
+                      <p className="text-lg font-medium text-gray-700">
+                        No approvals found
+                      </p>
+                      <p className="text-gray-500 mt-1">
+                        Try changing your search or filters
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  approvals.map((approval) => (
+                    <TableRow
+                      key={approval._id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 flex-shrink-0 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-sm font-semibold mr-3">
+                            {approval.companyName.charAt(0)}
+                          </div>
+                          <span>{approval.companyName}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {approval.studentName ||
+                          approval.student?.name ||
+                          "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(approval.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium ${getStatusColor(
+                            approval.approvalStatus
+                          )}`}
+                        >
+                          {approval.approvalStatus === "Approved" ? (
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                          ) : approval.approvalStatus === "Rejected" ? (
+                            <AlertCircle className="w-4 h-4 mr-1" />
+                          ) : (
+                            <AlertTriangle className="w-4 h-4 mr-1" />
+                          )}
+                          {approval.approvalStatus}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          {approval.approvalStatus === "Pending" && (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() =>
+                                  handleUpdateStatus(approval._id, "Approved")
+                                }
+                                disabled={actionLoading}
+                                className="bg-green-600 hover:bg-green-700 text-white transition-colors"
+                              >
+                                {actionLoading &&
+                                currentApprovalId === approval._id ? (
+                                  <span className="flex items-center">
+                                    <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></span>
+                                    Processing
+                                  </span>
+                                ) : (
+                                  "Approve"
+                                )}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => openRejectionModal(approval._id)}
+                                disabled={actionLoading}
+                                className="transition-colors hover:bg-red-700"
+                              >
+                                Reject
+                              </Button>
+                            </>
+                          )}
+                          {(approval.approvalStatus === "Approved" ||
+                            approval.approvalStatus === "Rejected") && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                handleUpdateStatus(approval._id, "Pending")
+                              }
+                              disabled={actionLoading}
+                              className="hover:bg-gray-100 transition-colors"
+                            >
+                              Reset
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleViewDetails(approval)}
+                            className="hover:bg-gray-200 transition-colors"
+                          >
+                            View Details
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
-          {totalPages > 1 && (
-            <div className="flex justify-center gap-2">
+
+          {/* Pagination */}
+          <div className="flex justify-between items-center mt-6">
+            <div className="text-sm text-gray-700">
+              Showing {(page - 1) * 10 + 1} to {Math.min(page * 10, total)} of{" "}
+              {total} entries
+            </div>
+            {totalPages > 1 && (
+              <div className="flex justify-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1 || loading}
+                  className="hover:bg-gray-100 transition-colors"
+                >
+                  Previous
+                </Button>
+                <span className="py-2 px-4 bg-gray-100 rounded-md text-sm">
+                  Page {page} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages || loading}
+                  className="hover:bg-gray-100 transition-colors"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Export and Print Buttons */}
+          {approvals.length > 0 && (
+            <div className="mt-4 text-right">
               <Button
-                variant="outline"
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1 || loading}
-                className="hover:bg-gray-100 transition-colors"
+                onClick={exportToCSV}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 mr-2 flex items-center inline-flex"
               >
-                Previous
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  ></path>
+                </svg>
+                Export to CSV
               </Button>
-              <span className="py-2 px-4 bg-gray-100 rounded-md text-sm">
-                Page {page} of {totalPages}
-              </span>
               <Button
-                variant="outline"
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages || loading}
-                className="hover:bg-gray-100 transition-colors"
+                onClick={handlePrint}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition duration-200 flex items-center inline-flex"
               >
-                Next
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                  ></path>
+                </svg>
+                Print View
               </Button>
             </div>
           )}
-        </div>
-        
-        {/* Render the modals */}
-        <RejectionModal />
-        <DetailsModal />
-        
-        {/* Add CSS for animations */}
-        <style jsx global>{`
-          @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-          }
-          
-          @keyframes scaleIn {
-            from { transform: scale(0.95); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-          }
-          
-          @keyframes slideDown {
-            from { transform: translateY(-10px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-          }
-          
-          @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-            20%, 40%, 60%, 80% { transform: translateX(5px); }
-          }
-          
-          .animate-fadeIn {
-            animation: fadeIn 0.2s ease-out;
-          }
-          
-          .animate-scaleIn {
-            animation: scaleIn 0.3s ease-out;
-          }
-          
-          .animate-slideDown {
-            animation: slideDown 0.3s ease-out;
-          }
-          
-          .animate-shake {
-            animation: shake 0.5s ease-in-out;
-          }
-        `}</style>
-      </CardContent>
-    </Card>
+
+          {/* Render the modals */}
+          <RejectionModal
+            showRejectionModal={showRejectionModal}
+            rejectionReason={rejectionReason}
+            setRejectionReason={setRejectionReason}
+            closeRejectionModal={closeRejectionModal}
+            submitRejection={submitRejection}
+            actionLoading={actionLoading}
+          />
+          <DetailsModal />
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

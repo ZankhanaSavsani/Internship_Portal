@@ -34,3 +34,23 @@ export const getAllGuides = async () => {
     throw error;
   }
 };
+
+// Delete guide allocation
+export const deleteGuideAllocation = async (data) => {
+  try {
+    const response = await axios.delete(
+      "http://localhost:5000/api/guide-allocation/delete-guide-allocation", 
+      {
+        data,  // This sends the data in the request body for DELETE requests
+        withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('userToken')}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("API Error deleting guide allocation:", error);
+    throw error;
+  }
+};

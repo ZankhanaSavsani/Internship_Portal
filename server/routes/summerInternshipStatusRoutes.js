@@ -8,7 +8,7 @@ const {
   updateInternshipStatus,
   deleteInternshipStatus,
 } = require("../controllers/summerInternshipStatusController");
-const { checkRoleAccess } = require("../middleware/authMiddleware");
+const { validateToken, checkRoleAccess } = require("../middleware/authMiddleware");
 const { validateInternshipStatus} = require("../middleware/validateInternshipStatusMiddleware");
 
 const validateFiles = (req, res, next) => {
@@ -26,6 +26,7 @@ const validateFiles = (req, res, next) => {
 // Apply Multer middleware for file uploads
 router.post(
   "/",
+  validateToken,
   checkRoleAccess(["student"]),
   upload.single("offerLetter"), // Handle single file upload
   handleMulterErrors,
@@ -36,6 +37,7 @@ router.post(
 
 router.put(
   "/:id",
+  validateToken,
   checkRoleAccess(["student", "admin"]),
   upload.single("offerLetter"), // Handle single file upload
   validateInternshipStatus,
@@ -43,12 +45,12 @@ router.put(
 );
 
 // GET all internship statuses
-router.get("/", checkRoleAccess(["admin"]), getAllInternshipStatuses);
+router.get("/", validateToken, checkRoleAccess(["admin"]), getAllInternshipStatuses);
 
 // GET single internship status by ID
-router.get("/:id", checkRoleAccess(["student", "guide", "admin"]), getInternshipStatusById);
+router.get("/:id", validateToken, checkRoleAccess(["student", "guide", "admin"]), getInternshipStatusById);
 
 // DELETE remove an internship status
-router.delete("/:id", checkRoleAccess(["student", "admin"]), deleteInternshipStatus);
+router.delete("/:id", validateToken, checkRoleAccess(["student", "admin"]), deleteInternshipStatus);
 
 module.exports = router;

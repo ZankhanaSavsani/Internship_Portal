@@ -150,3 +150,44 @@ exports.deleteCompanyApproval = async (req, res, next) => {
     next(error);
   }
 };
+
+// Update approval status and rejection reason
+exports.updateApprovalStatus = async (req, res) => {
+  const { id } = req.params; // Company approval ID
+  const { approvalStatus, rejectionReason } = req.body;
+
+  try {
+    // Validate input
+    if (!approvalStatus || !["Pending", "Approved", "Rejected"].includes(approvalStatus)) {
+      return res.status(400).json({ message: "Invalid approval status" });
+    }
+
+    if (approvalStatus === "Rejected" && !rejectionReason) {
+      return res.status(400).json({ message: "Rejection reason is required for rejected status" });
+    }
+
+    // Find the company approval by ID
+    const companyApproval = await CompanyApprovalDetails.findById(id);
+
+    if (!companyApproval) {
+      return res.status(404).json({ message: "Company approval not found" });
+    }
+
+    // Update the approval status and rejection reason
+    companyApproval.approvalStatus = approvalStatus;
+    companyApproval.rejectionReason = approvalStatus === "Rejected" ? rejectionReason : null;
+
+    // Save the updated document
+    await companyApproval.save();
+
+    // Return success response
+    res.status(200).json({
+      message: "Approval status updated successfully",
+      data: companyApproval,
+    });
+  } catch (error) {
+    console.error("Error updating approval status:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+

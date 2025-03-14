@@ -2,10 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Building2,
-  Users,
-  FileText,
-  CheckSquare,
+  ClipboardCheck,
+  FileBarChart,
   ClipboardList,
+  UserCheck,
   Menu,
   X,
   Bell,
@@ -13,7 +13,10 @@ import {
   User,
   ChevronDown,
   UserCog,
-  Shield,
+  ShieldCheck,
+  UsersRound,
+  CalendarClock,
+  ListChecks,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -50,12 +53,12 @@ const NavLayout = ({ children }) => {
       path: "/admin/CompanyApprovalForm",
     },
     {
-      icon: <FileText size={20} />,
+      icon: <FileBarChart size={20} />,
       text: "Status",
       path: "/admin/SummerInternshipStatusForm",
     },
     {
-      icon: <CheckSquare size={20} />,
+      icon: <ClipboardCheck size={20} />,
       text: "Completion",
       path: "/admin/SummerInternshipCompletionForm",
     },
@@ -65,7 +68,7 @@ const NavLayout = ({ children }) => {
       path: "/admin/WeeklyReport",
     },
     {
-      icon: <Users size={20} />,
+      icon: <UsersRound size={20} />,
       text: "Manage Students",
       path: "/admin/StudentManagementPages",
     },
@@ -75,17 +78,17 @@ const NavLayout = ({ children }) => {
       path: "/admin/GuideManagementPages",
     },
     {
-      icon: <Shield size={20} />,
+      icon: <ShieldCheck size={20} />,
       text: "Manage Admins",
       path: "/admin/AdminManagementPages",
     },
     {
-      icon: <Shield size={20} />,
+      icon: <UserCheck size={20} />,
       text: "GuideAllocationForm",
       path: "/admin/GuideAllocationForm",
     },
     {
-      icon: <Shield size={20} />,
+      icon: <ListChecks size={20} />,
       text: "GuideAllocationList",
       path: "/admin/GuideAllocationList",
     },

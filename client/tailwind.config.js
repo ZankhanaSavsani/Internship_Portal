@@ -5,6 +5,7 @@ module.exports = {
   ],
   theme: {
     extend: {
+      // Custom colors
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -36,12 +37,28 @@ module.exports = {
           foreground: "hsl(var(--card-foreground))",
         },
       },
+      // Custom border radius
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      // Custom animations
+      keyframes: {
+        fadeIn: {
+          from: { opacity: 0 },
+          to: { opacity: 1 },
+        },
+        scaleIn: {
+          from: { transform: "scale(0.95)", opacity: 0 },
+          to: { transform: "scale(1)", opacity: 1 },
+        },
+      },
+      animation: {
+        fadeIn: "fadeIn 0.2s ease-out",
+        scaleIn: "scaleIn 0.3s ease-out",
+      },
     },
   },
   plugins: [],
-}
+};
