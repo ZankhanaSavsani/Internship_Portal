@@ -17,6 +17,7 @@ import {
   UsersRound,
   CalendarClock,
   ListChecks,
+  Download,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -55,17 +56,17 @@ const NavLayout = ({ children }) => {
     {
       icon: <FileBarChart size={20} />,
       text: "Status",
-      path: "/admin/SummerInternshipStatusForm",
+      path: "/admin/ManageInternshipStatus",
     },
     {
       icon: <ClipboardCheck size={20} />,
       text: "Completion",
-      path: "/admin/SummerInternshipCompletionForm",
+      path: "/admin/ManageInternshipCompletionStatus",
     },
     {
       icon: <ClipboardList size={20} />,
       text: "Weekly Reports",
-      path: "/admin/WeeklyReport",
+      path: "/admin/ManageWeeklyReports",
     },
     {
       icon: <UsersRound size={20} />,
@@ -92,6 +93,11 @@ const NavLayout = ({ children }) => {
       text: "GuideAllocationList",
       path: "/admin/GuideAllocationList",
     },
+    {
+      icon: <Download size={20} />,
+      text: "Download Data",
+      path: "/admin/DownloadPage",
+    },
   ];
 
   const handleLogout = async () => {
@@ -107,11 +113,13 @@ const NavLayout = ({ children }) => {
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 w-full bg-white z-50 px-4 py-3 border-b shadow-md flex justify-between items-center">
-        <div className="h-20 flex items-center">
+        <div className="h-12 flex items-center">
+          {" "}
+          {/* Reduced height from h-20 to h-12 for better proportion */}
           <img
             src="/images/logo.png"
-            alt="Company Logo"
-            className="h-full w-auto object-contain max-w-[250px]"
+            alt="Institution Logo"
+            className="h-full w-auto object-contain"
           />
         </div>
         <div className="flex items-center space-x-2">
@@ -152,12 +160,16 @@ const NavLayout = ({ children }) => {
         }
       `}
       >
-        <div className="hidden lg:flex p-4 border-b bg-gray-100 justify-between items-center">
-          <div className="h-12 flex items-center">
+        <div className="hidden lg:flex p-4 border-b bg-gray-100 justify-center items-center">
+          {" "}
+          {/* Changed to justify-center */}
+          <div className="h-16 flex items-center">
+            {" "}
+            {/* Increased height from h-12 to h-16 */}
             <img
               src="/images/logo.png"
-              alt="Company Logo"
-              className="h-full w-auto object-contain max-w-[280px]"
+              alt="Institution Logo"
+              className="h-full w-auto object-contain"
             />
           </div>
         </div>

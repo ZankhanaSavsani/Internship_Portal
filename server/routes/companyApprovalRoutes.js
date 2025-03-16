@@ -7,6 +7,7 @@ const {
   updateCompanyApproval,
   deleteCompanyApproval,
   updateApprovalStatus,
+  restoreCompanyApproval,
 } = require("../controllers/companyApprovalController");
 const validateCompanyApproval = require("../middleware/validateCompanyApproval"); // Import the validation middleware
 const { validateToken, checkRoleAccess } = require("../middleware/authMiddleware");
@@ -26,5 +27,8 @@ router.delete("/:id", validateToken, checkRoleAccess(["student", "admin"]), dele
 
 // PATCH route to update approval status
 router.patch("/:id", validateToken, checkRoleAccess(["admin"]), updateApprovalStatus);
+
+// Restore an approval
+router.patch("/:id/restore", validateToken, checkRoleAccess(["student", "admin"]), restoreCompanyApproval);
 
 module.exports = router;

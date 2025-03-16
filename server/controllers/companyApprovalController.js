@@ -1,6 +1,7 @@
 const logger = require("../utils/logger");
 const CompanyApprovalDetails = require("../models/CompanyApprovalFormModel");
-// const StudentModel = require("../models/StudentModel"); 
+const StudentInternship = require("../models/StudentInternshipModel");
+// const StudentModel = require("../models/StudentModel");
 
 // @desc   Get a single company approval by ID (excluding soft-deleted records)
 // @route  GET /api/company-approvals/:id
@@ -18,17 +19,21 @@ exports.getCompanyApprovalById = async (req, res, next) => {
 
     if (!approval) {
       logger.error(`[GET /api/company-approvals/${req.params.id}] Not Found`);
-      return res.status(404).json({ success: false, message: "Approval record not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Approval record not found" });
     }
 
     res.status(200).json({ success: true, data: approval });
   } catch (error) {
-    logger.error(`[GET /api/company-approvals/${req.params.id}] Error: ${error.message}`);
+    logger.error(
+      `[GET /api/company-approvals/${req.params.id}] Error: ${error.message}`
+    );
     next(error);
   }
 };
 
-// @desc   Get all company approvals with pagination, sorting, and filtering (excluding soft-deleted records)
+// @desc   Get all company approvals with pagination, sorting, and filtering (including/excluding soft-deleted records)
 // @route  GET /api/company-approvals
 exports.getAllCompanyApprovals = async (req, res, next) => {
   try {
@@ -42,25 +47,41 @@ exports.getAllCompanyApprovals = async (req, res, next) => {
     const sortOptions = { [sortField]: sortOrder };
 
     // Dynamic filtering
-    const filterOptions = { isDeleted: false };
+    const filterOptions = {};
+
+    // Include/exclude soft-deleted records based on the `includeDeleted` query parameter
+    if (req.query.includeDeleted !== "true") {
+      filterOptions.isDeleted = false; // Exclude soft-deleted records by default
+    }
+
+    // Add filters for companyName, studentName, and status
     if (req.query.companyName) {
-      filterOptions.companyName = { $regex: req.query.companyName, $options: "i" };
+      filterOptions.companyName = {
+        $regex: req.query.companyName,
+        $options: "i",
+      };
     }
     if (req.query.studentName) {
-      filterOptions.studentName = { $regex: req.query.studentName, $options: "i" };
+      filterOptions.studentName = {
+        $regex: req.query.studentName,
+        $options: "i",
+      };
     }
     if (req.query.status) {
       filterOptions.approvalStatus = req.query.status; // Use approvalStatus directly
     }
 
+    // Fetch approvals with filtering, sorting, and pagination
     const approvals = await CompanyApprovalDetails.find(filterOptions)
       .populate("student", "name email")
       .sort(sortOptions)
       .skip(skip)
       .limit(limit);
 
+    // Count total documents matching the filter
     const total = await CompanyApprovalDetails.countDocuments(filterOptions);
 
+    // Send response
     res.status(200).json({
       success: true,
       total,
@@ -80,11 +101,13 @@ exports.getAllCompanyApprovals = async (req, res, next) => {
 exports.createCompanyApproval = async (req, res, next) => {
   try {
     const student = req.user.id;
-    const {studentName} = req.body;
+    const { studentName } = req.body;
 
     if (!student || !studentName) {
       logger.error("[POST /api/company-approvals] Invalid user!!");
-      return res.status(400).json({ success: false, message: "Invalid user!!" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid user!!" });
     }
 
     // Add student and studentName to the request body
@@ -96,6 +119,23 @@ exports.createCompanyApproval = async (req, res, next) => {
 
     // Create the new approval
     const newApproval = await CompanyApprovalDetails.create(approvalData);
+
+    // Find the corresponding StudentInternship document
+    const studentInternship = await StudentInternship.findOne({ student });
+
+    if (!studentInternship) {
+      return res.status(404).json({
+        success: false,
+        message: "Student internship record not found.",
+      });
+    }
+
+    // Push the new internship status ObjectId into the summerInternshipStatus array
+    studentInternship.companyApprovalDetails.push(newApproval._id);
+
+    // Save the updated StudentInternship document
+    await studentInternship.save();
+
     logger.info(`[POST /api/company-approvals] Created ID: ${newApproval._id}`);
 
     res.status(201).json({ success: true, data: newApproval });
@@ -117,13 +157,17 @@ exports.updateCompanyApproval = async (req, res, next) => {
 
     if (!updatedApproval) {
       logger.error(`[PUT /api/company-approvals/${req.params.id}] Not Found`);
-      return res.status(404).json({ success: false, message: "Approval record not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Approval record not found" });
     }
 
     logger.info(`[PUT /api/company-approvals/${req.params.id}] Updated`);
     res.status(200).json({ success: true, data: updatedApproval });
   } catch (error) {
-    logger.error(`[PUT /api/company-approvals/${req.params.id}] Error: ${error.message}`);
+    logger.error(
+      `[PUT /api/company-approvals/${req.params.id}] Error: ${error.message}`
+    );
     next(error);
   }
 };
@@ -135,18 +179,31 @@ exports.deleteCompanyApproval = async (req, res, next) => {
     const approval = await CompanyApprovalDetails.findById(req.params.id);
 
     if (!approval || approval.isDeleted) {
-      logger.error(`[DELETE /api/company-approvals/${req.params.id}] Not Found`);
-      return res.status(404).json({ success: false, message: "Approval record not found or already deleted" });
+      logger.error(
+        `[DELETE /api/company-approvals/${req.params.id}] Not Found`
+      );
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "Approval record not found or already deleted",
+        });
     }
 
     approval.isDeleted = true;
     approval.deletedAt = new Date();
     await approval.save();
 
-    logger.info(`[DELETE /api/company-approvals/${req.params.id}] Soft Deleted`);
-    res.status(200).json({ success: true, message: "Approval record deleted successfully" });
+    logger.info(
+      `[DELETE /api/company-approvals/${req.params.id}] Soft Deleted`
+    );
+    res
+      .status(200)
+      .json({ success: true, message: "Approval record deleted successfully" });
   } catch (error) {
-    logger.error(`[DELETE /api/company-approvals/${req.params.id}] Error: ${error.message}`);
+    logger.error(
+      `[DELETE /api/company-approvals/${req.params.id}] Error: ${error.message}`
+    );
     next(error);
   }
 };
@@ -158,12 +215,17 @@ exports.updateApprovalStatus = async (req, res) => {
 
   try {
     // Validate input
-    if (!approvalStatus || !["Pending", "Approved", "Rejected"].includes(approvalStatus)) {
+    if (
+      !approvalStatus ||
+      !["Pending", "Approved", "Rejected"].includes(approvalStatus)
+    ) {
       return res.status(400).json({ message: "Invalid approval status" });
     }
 
     if (approvalStatus === "Rejected" && !rejectionReason) {
-      return res.status(400).json({ message: "Rejection reason is required for rejected status" });
+      return res
+        .status(400)
+        .json({ message: "Rejection reason is required for rejected status" });
     }
 
     // Find the company approval by ID
@@ -175,7 +237,8 @@ exports.updateApprovalStatus = async (req, res) => {
 
     // Update the approval status and rejection reason
     companyApproval.approvalStatus = approvalStatus;
-    companyApproval.rejectionReason = approvalStatus === "Rejected" ? rejectionReason : null;
+    companyApproval.rejectionReason =
+      approvalStatus === "Rejected" ? rejectionReason : null;
 
     // Save the updated document
     await companyApproval.save();
@@ -191,3 +254,46 @@ exports.updateApprovalStatus = async (req, res) => {
   }
 };
 
+// @desc   Restore a soft-deleted company approval
+// @route  PATCH /api/company-approvals/:id/restore
+exports.restoreCompanyApproval = async (req, res, next) => {
+  try {
+    const approval = await CompanyApprovalDetails.findOne({
+      _id: req.params.id,
+      isDeleted: true, // Only restore if it's soft-deleted
+    });
+
+    if (!approval) {
+      logger.error(
+        `[PATCH /api/company-approvals/${req.params.id}/restore] Not Found`
+      );
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "Approval record not found or not soft-deleted",
+        });
+    }
+
+    // Restore the record
+    approval.isDeleted = false;
+    approval.deletedAt = null;
+    await approval.save();
+
+    logger.info(
+      `[PATCH /api/company-approvals/${req.params.id}/restore] Restored`
+    );
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Approval record restored successfully",
+        data: approval,
+      });
+  } catch (error) {
+    logger.error(
+      `[PATCH /api/company-approvals/${req.params.id}/restore] Error: ${error.message}`
+    );
+    next(error);
+  }
+};

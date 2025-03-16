@@ -116,6 +116,24 @@ studentSchema.pre("save", async function (next) {
       }
     }
 
+    // Create a StudentInternship document if it doesn't exist
+    const existingInternship = await StudentInternship.findOne({
+      student: this._id,
+      semester: this.semester,
+    });
+
+    if (!existingInternship) {
+      const newInternship = new StudentInternship({
+        student: this._id,
+        semester: this.semester,
+        guide: null, // Guide will be assigned later if applicable
+        isGuideManuallyAssigned: false,
+      });
+
+      await newInternship.save();
+      console.log(`Created StudentInternship for student ${this.studentId} for semester ${this.semester}`);
+    }
+
     next();
   } catch (error) {
     next(error);

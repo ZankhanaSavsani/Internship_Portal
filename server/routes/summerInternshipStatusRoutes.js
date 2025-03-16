@@ -7,6 +7,7 @@ const {
   createInternshipStatus,
   updateInternshipStatus,
   deleteInternshipStatus,
+  restoreInternshipStatus,
 } = require("../controllers/summerInternshipStatusController");
 const { validateToken, checkRoleAccess } = require("../middleware/authMiddleware");
 const { validateInternshipStatus} = require("../middleware/validateInternshipStatusMiddleware");
@@ -52,5 +53,8 @@ router.get("/:id", validateToken, checkRoleAccess(["student", "guide", "admin"])
 
 // DELETE remove an internship status
 router.delete("/:id", validateToken, checkRoleAccess(["student", "admin"]), deleteInternshipStatus);
+
+// New route for restoring soft-deleted data
+router.patch("/:id/restore", validateToken, checkRoleAccess(["admin"]), restoreInternshipStatus);
 
 module.exports = router;

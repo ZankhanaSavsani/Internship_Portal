@@ -255,3 +255,58 @@ exports.updateGuide = async (req, res, next) => {
     next(new Error(`Failed to update guide: ${error.message}`));
   }
 };
+
+// @desc    Fetch Student Internship Data by Student ID and Semester
+// @route   GET /api/studentInternship/student/:studentId
+// @access  Private
+exports.getStudentInternshipByStudentIdAndSemester = async (req, res, next) => {
+  try {
+    const { studentId } = req.params;
+    const { semester } = req.query;
+
+    // Validate input
+    if (!studentId || !semester) {
+      return res.status(400).json({
+        success: false,
+        message: "Student ID and Semester are required.",
+      });
+    }
+
+    // Find the student by studentId and semester
+    const student = await Student.findOne({ studentId, semester: parseInt(semester) });
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found for the given semester.",
+      });
+    }
+
+    // Find the StudentInternship record for the student and semester
+    const studentInternship = await StudentInternship.findOne({
+      student: student._id,
+      semester: parseInt(semester),
+    })
+      .populate("guide", "name email") // Populate guide details
+      .populate("weeklyReports") // Populate weekly reports
+      .populate("companyApprovalDetails") // Populate company approval details
+      .populate("summerInternshipStatus") // Populate summer internship status
+      .populate("summerInternshipCompletionStatus"); // Populate summer internship completion status
+
+    if (!studentInternship) {
+      return res.status(404).json({
+        success: false,
+        message: "No internship record found for this student and semester.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: studentInternship,
+    });
+  } catch (error) {
+    logger.error(
+      `[GET /api/studentInternship/student/${req.params.studentId}] Error: ${error.message}`
+    );
+    next(new Error(`Failed to fetch student internship data: ${error.message}`));
+  }
+};

@@ -5,6 +5,7 @@ const { sendEmail } = require("../utils/mailer");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
+const StudentInternship = require("../models/StudentInternshipModel");
 
 // @desc   Create a new student record
 // @route  POST /api/students

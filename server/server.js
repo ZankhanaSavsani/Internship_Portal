@@ -38,6 +38,7 @@ const weeklyReportRoutes = require("./routes/weeklyReportRoutes");
 const downloadRoutes = require('./routes/downloadRoutes');
 const uploadRoutes = require("./routes/uploadRoutes");
 const guideAllocationRoutes = require("./routes/guideAllocationRoutes");
+const studentInternshipRoutes = require("./routes/studentInternshipRoutes");
 
 
 // Use Routes
@@ -49,6 +50,7 @@ app.use("/api/company-approvals", companyApprovalRoutes);
 app.use("/api/summer-internship-status", summerInternshipStatusRoutes);
 app.use("/api/summer-internship-completion", summerInternshipCompletionRoutes);
 app.use("/api/weeklyReport", weeklyReportRoutes);
+app.use("/api/studentInternship",studentInternshipRoutes);
 app.use('/api', downloadRoutes);
 app.use("/api", uploadRoutes);
 app.use("/api/guide-allocation", guideAllocationRoutes);

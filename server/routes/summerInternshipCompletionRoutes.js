@@ -8,6 +8,7 @@ const {
   getInternshipCompletionStatusById,
   updateInternshipCompletionStatus,
   deleteInternshipCompletionStatus,
+  restoreInternshipCompletionStatus
 } = require("../controllers/summerInternshipCompletionController");
 const { validateToken, checkRoleAccess } = require("../middleware/authMiddleware");
 const upload = multer({ dest: "uploads/" }); // Temporary storage for uploaded files
@@ -80,5 +81,9 @@ router.delete(
   checkRoleAccess(["student", "admin"]),
   deleteInternshipCompletionStatus
 );
+
+// New route for restoring soft-deleted data
+router.patch("/:id/restore", validateToken, checkRoleAccess(["admin"]), restoreInternshipCompletionStatus);
+
 
 module.exports = router;

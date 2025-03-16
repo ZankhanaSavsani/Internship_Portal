@@ -6,6 +6,7 @@ const {
   addSummerInternshipStatus,
   addSummerInternshipCompletionStatus,
   updateGuide,
+  getStudentInternshipByStudentIdAndSemester,
 } = require("../controllers/studentInternshipController");
 const {validateToken, checkRoleAccess } = require("../middleware/authMiddleware");
 
@@ -28,5 +29,14 @@ router.post(
 
 // Update the guide for a student internship record
 router.put("/:id/update-guide", validateToken, checkRoleAccess(["admin"]), updateGuide);
+
+// Fetch Student Internship Data by Student ID and Semester
+router.get(
+  "/student/:studentId",
+  validateToken,
+  checkRoleAccess(["admin"]),
+  getStudentInternshipByStudentIdAndSemester
+);
+
 
 module.exports = router;

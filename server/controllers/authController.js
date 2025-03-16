@@ -107,13 +107,14 @@ exports.login = [
   async (req, res) => {
     const startTime = process.env.NODE_ENV !== 'production' ? Date.now() : null;
     try {
-      const { role, username, password, studentId } = req.body;
+      const { role, username, password, studentId, semester } = req.body;
 
       // Input validation with detailed logging
-      if (!role || !password || (!username && !studentId)) {
+      if (!role || !password || (!username && !studentId) || (role === 'student' && !semester)) {
         const missingFields = ['role', 'password'];
         if (!username && role !== 'student') missingFields.push('username');
         if (!studentId && role === 'student') missingFields.push('studentId');
+        if (role === 'student' && !semester) missingFields.push('semester');
 
         logger.warn('[LOGIN ATTEMPT] Missing fields', { missingFields });
         return res.status(400).json({
@@ -136,7 +137,7 @@ exports.login = [
       }
 
       // Determine the login identifier based on role
-      const loginIdentifier = role.toLowerCase() === 'student' ? { studentId } : { username };
+      const loginIdentifier = role.toLowerCase() === 'student' ? { studentId, semester } : { username };
 
       // User authentication
       const user = await UserModel.findOne(loginIdentifier)
@@ -147,6 +148,7 @@ exports.login = [
         logger.warn('[LOGIN FAILED]', {
           [role.toLowerCase() === 'student' ? 'studentId' : 'username']: role.toLowerCase() === 'student' ? studentId : username,
           role,
+          semester: role.toLowerCase() === 'student' ? semester : undefined,
           reason: !user ? 'User not found' : 'Invalid password'
         });
         return res.status(401).json({
@@ -176,6 +178,7 @@ exports.login = [
 
       if (role.toLowerCase() === 'student') {
         logData.studentId = user.studentId;
+        logData.semester = user.semester;
       } else {
         logData.username = user.username;
       }
@@ -193,6 +196,7 @@ exports.login = [
           id: user._id, // Include _id in the response
           role: user.role,
           [role.toLowerCase() === 'student' ? 'studentId' : 'username']: role.toLowerCase() === 'student' ? user.studentId : user.username,
+          semester: role.toLowerCase() === 'student' ? user.semester : undefined,
           lastLogin: user.lastLogin
         },
         tokens: {

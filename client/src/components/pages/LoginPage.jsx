@@ -9,7 +9,7 @@ import {
   UserCog,
   Users,
   Loader2,
-  CheckCircle
+  CheckCircle,
 } from "lucide-react";
 import axios from "axios";
 
@@ -22,6 +22,7 @@ const InternshipLoginForm = () => {
   const [formData, setFormData] = useState({
     username: "",
     password: "",
+    semester: "", // Add semester field
   });
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,7 +34,7 @@ const InternshipLoginForm = () => {
       // Check if the student has provided their name and completed onboarding
       if (user.role === "student" && (!user.studentName || !user.isOnboarded)) {
         // Redirect to the onboarding page
-        navigate("/student/onboarding", { replace: true });
+        navigate("/student", { replace: true });
       } else {
         // Redirect based on role
         const redirectPath = location.state?.from || `/${user.role}`;
@@ -58,13 +59,13 @@ const InternshipLoginForm = () => {
   const getUsernamePlaceholder = () => {
     switch (selectedTab) {
       case "student":
-        return "studentId";
+        return "Student ID";
       case "guide":
-        return "username";
+        return "Username";
       case "admin":
-        return "username";
+        return "Username";
       default:
-        return "username";
+        return "Username";
     }
   };
 
@@ -80,6 +81,13 @@ const InternshipLoginForm = () => {
       return;
     }
 
+    // Additional validation for students
+    if (selectedTab === "student" && !formData.semester) {
+      setError("Semester is required for students.");
+      setIsSubmitting(false);
+      return;
+    }
+
     // Prepare the payload based on the selected tab
     const payload = {
       role: selectedTab,
@@ -89,6 +97,7 @@ const InternshipLoginForm = () => {
     // Add username or studentId based on the selected role
     if (selectedTab === "student") {
       payload.studentId = formData.username;
+      payload.semester = formData.semester; // Include semester for students
     } else {
       payload.username = formData.username;
     }
@@ -96,7 +105,7 @@ const InternshipLoginForm = () => {
     try {
       // First try to login using the auth context
       await login(payload);
-      
+
       // If successful, make the API call
       const response = await axios.post("/api/auth/login", payload, {
         withCredentials: true,
@@ -109,6 +118,7 @@ const InternshipLoginForm = () => {
       setFormData({
         username: "",
         password: "",
+        semester: "", // Reset semester field
       });
     } catch (error) {
       console.error("Error during login:", error);
@@ -243,6 +253,28 @@ const InternshipLoginForm = () => {
               onChange={handleChange}
             />
           </div>
+
+          {/* Semester Field (Only for Students) */}
+          {selectedTab === "student" && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Semester <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="semester"
+                required
+                className="w-full px-4 py-3 bg-gray-50 rounded-lg border border-gray-200
+                         focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 
+                         transition-all duration-200"
+                value={formData.semester}
+                onChange={handleChange}
+              >
+                <option value="">Select Semester</option>
+                <option value="5">Semester 5</option>
+                <option value="7">Semester 7</option>
+              </select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">

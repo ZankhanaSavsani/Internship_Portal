@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard,
   Building2,
   Users,
   FileText,
@@ -24,23 +23,28 @@ import {
 import { Button } from "../../ui/button";
 import { Badge } from "../../ui/badge";
 import { useAuth } from "../../layouts/AuthProvider";
-import Cookies from "js-cookie"; // Import js-cookie
+import Cookies from "js-cookie";
 
 const NavLayout = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(3);
-  const [username, setUsername] = useState(""); // State to store the username
+  const [username, setUsername] = useState("");
   const navigate = useNavigate();
   const { logout } = useAuth();
 
   // Fetch the username from the cookie when the component mounts
   useEffect(() => {
-    const userCookie = Cookies.get("user"); // Assuming the username is stored in a cookie named "user"
+    const userCookie = Cookies.get("user");
     if (userCookie) {
-      const userData = JSON.parse(userCookie); // Parse the cookie data
-      setUsername(userData.studentName || "User"); // Set the username from the cookie
+      const userData = JSON.parse(userCookie);
+      setUsername(userData.studentName || "User");
     }
   }, []);
+
+  // Log username changes for debugging
+  useEffect(() => {
+    console.log("Username updated:", username);
+  }, [username]);
 
   const navItems = [
     {
@@ -48,7 +52,11 @@ const NavLayout = ({ children }) => {
       text: "Company Approval",
       path: "/student/CompanyApprovalForm",
     },
-    { icon: <FileText size={20} />, text: "Status", path: "/student/SummerInternshipStatusForm" },
+    {
+      icon: <FileText size={20} />,
+      text: "Status",
+      path: "/student/SummerInternshipStatusForm",
+    },
     {
       icon: <CheckSquare size={20} />,
       text: "Completion",
@@ -59,12 +67,16 @@ const NavLayout = ({ children }) => {
       text: "Weekly Reports",
       path: "/student/AddWeeklyReportPage",
     },
-    { icon: <Users size={20} />, text: "Mentor Selection", path: "/student/mentor" },
+    {
+      icon: <Users size={20} />,
+      text: "Mentor Selection",
+      path: "/student/mentor",
+    },
   ];
 
   const handleLogout = async () => {
-    await logout(); // Call the logout function from AuthProvider
-    navigate("/login"); // Redirect to login
+    await logout();
+    navigate("/login");
   };
 
   const handleStudentProfile = () => {
@@ -75,11 +87,11 @@ const NavLayout = ({ children }) => {
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 w-full bg-white z-50 px-4 py-3 border-b shadow-md flex justify-between items-center">
-        <div className="h-20 flex items-center">
+        <div className="h-12 flex items-center">
           <img
             src="/images/logo.png"
-            alt="Company Logo"
-            className="h-full w-auto object-contain max-w-[250px]"
+            alt="Institution Logo"
+            className="h-full w-auto object-contain"
           />
         </div>
         <div className="flex items-center space-x-2">
@@ -113,15 +125,19 @@ const NavLayout = ({ children }) => {
         transition-transform duration-300 ease-in-out
         z-40
         flex flex-col
-        ${isOpen ? "translate-x-0 mt-16 lg:mt-0" : "-translate-x-full lg:translate-x-0"}
+        ${
+          isOpen
+            ? "translate-x-0 mt-16 lg:mt-0"
+            : "-translate-x-full lg:translate-x-0"
+        }
       `}
       >
-        <div className="hidden lg:flex p-4 border-b bg-gray-100 justify-between items-center">
-          <div className="h-20 flex items-center">
+        <div className="hidden lg:flex p-4 border-b bg-gray-100 justify-center items-center">
+          <div className="h-16 flex items-center">
             <img
               src="/images/logo.png"
-              alt="Company Logo"
-              className="h-full w-auto object-contain max-w-[280px]"
+              alt="Institution Logo"
+              className="h-full w-auto object-contain"
             />
           </div>
         </div>
@@ -170,7 +186,10 @@ const NavLayout = ({ children }) => {
               </div>
             }
           >
-            <CustomDropdownMenuItem className="cursor-pointer hover:bg-gray-100 p-3 rounded-lg" onClick={handleStudentProfile}>
+            <CustomDropdownMenuItem
+              className="cursor-pointer hover:bg-gray-100 p-3 rounded-lg"
+              onClick={handleStudentProfile}
+            >
               <User className="mr-2 h-4 w-4 text-gray-600" />
               <span>Profile</span>
             </CustomDropdownMenuItem>

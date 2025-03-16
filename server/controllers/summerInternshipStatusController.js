@@ -7,26 +7,31 @@ const {
 } = require("../utils/googleDriveUtils");
 const mongoose = require("mongoose");
 const objectId = new mongoose.Types.ObjectId(); 
+const StudentInternship = require("../models/StudentInternshipModel");
 
-// @desc   Get all internship statuses (excluding soft-deleted ones)
+// @desc   Get all internship statuses (including soft-deleted ones if requested)
 // @route  GET /api/summer-internships
 exports.getAllInternshipStatuses = async (req, res, next) => {
   try {
-    const page = parseInt(req.query.page) || 1; // Default to page 1
-    const limit = parseInt(req.query.limit) || 10; // Default limit of 10
-    const skip = (page - 1) * limit; // Calculate records to skip
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-    const validSortFields = ["createdAt", "companyName", "typeOfInternship"]; // Add valid fields
-
-    // Dynamic sorting
+    const validSortFields = ["createdAt", "companyName", "typeOfInternship"];
     const sortField = validSortFields.includes(req.query.sortBy)
-  ? req.query.sortBy
-  : "createdAt"; // Default to "createdAt" if invalid
+      ? req.query.sortBy
+      : "createdAt";
     const sortOrder = req.query.order === "desc" ? -1 : 1;
     const sortOptions = { [sortField]: sortOrder };
 
     // Dynamic filtering
-    const filterOptions = { isDeleted: false }; // Exclude soft-deleted records
+    const filterOptions = {};
+
+    // Include soft-deleted records if requested
+    if (req.query.includeDeleted !== "true") {
+      filterOptions.isDeleted = false; // Exclude soft-deleted records by default
+    }
+
     if (req.query.companyName) {
       filterOptions.companyName = {
         $regex: req.query.companyName,
@@ -151,6 +156,22 @@ exports.createInternshipStatus = async (req, res, next) => {
     };
 
     const newStatus = await SummerInternshipStatus.create(internshipData);
+    
+    // Find the corresponding StudentInternship document
+    const studentInternship = await StudentInternship.findOne({ student });
+
+    if (!studentInternship) {
+      return res.status(404).json({
+        success: false,
+        message: "Student internship record not found.",
+      });
+    }
+
+    // Push the new internship status ObjectId into the summerInternshipStatus array
+    studentInternship.summerInternshipStatus.push(newStatus._id);
+
+    // Save the updated StudentInternship document
+    await studentInternship.save();
 
     logger.info(
       `[POST /api/summer-internship-status] Created ID: ${newStatus._id}`
@@ -213,3 +234,33 @@ exports.deleteInternshipStatus = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc   Restore a soft-deleted internship status
+// @route  PATCH /api/summer-internships/:id/restore
+exports.restoreInternshipStatus = async (req, res, next) => {
+  try {
+    const status = await SummerInternshipStatus.findById(req.params.id);
+
+    // Check if the record exists and is soft-deleted
+    if (!status || !status.isDeleted) {
+      return res.status(404).json({
+        message: "Internship status not found or not deleted",
+      });
+    }
+
+    // Restore the record
+    status.isDeleted = false;
+    status.deletedAt = null;
+    await status.save();
+
+    logger.info(`Internship status restored: ${status._id}`);
+    res.status(200).json({
+      success: true,
+      message: `Internship status ${status._id} restored successfully`,
+      data: status,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

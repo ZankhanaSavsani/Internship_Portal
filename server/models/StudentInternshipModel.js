@@ -10,7 +10,6 @@ const studentInternshipSchema = new mongoose.Schema(
     guide: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Guide",
-      required: true,
     },
     semester: {
       type: Number,

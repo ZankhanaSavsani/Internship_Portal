@@ -57,6 +57,12 @@ const weeklyReportSchema = new mongoose.Schema(
       type: String, // Guide's feedback or rejection reason
       default: null,
     },
+    marks: {
+      type: Number,
+      min: 0,
+      max: 10, // Marks out of 10
+      default: null,
+    },
     isDeleted: {
       type: Boolean,
       default: false
