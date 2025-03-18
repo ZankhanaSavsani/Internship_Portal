@@ -1,7 +1,10 @@
 const logger = require("../utils/logger");
 const CompanyApprovalDetails = require("../models/CompanyApprovalFormModel");
 const StudentInternship = require("../models/StudentInternshipModel");
+const Admins = require("../models/AdminModel");
+const Notification = require("../models/NotificationModel");
 // const StudentModel = require("../models/StudentModel");
+
 
 // @desc   Get a single company approval by ID (excluding soft-deleted records)
 // @route  GET /api/company-approvals/:id
@@ -97,51 +100,92 @@ exports.getAllCompanyApprovals = async (req, res, next) => {
 
 // @desc   Create a new company approval request
 // @route  POST /api/company-approvals
-
 exports.createCompanyApproval = async (req, res, next) => {
   try {
     const student = req.user.id;
     const { studentName } = req.body;
-
+    
     if (!student || !studentName) {
       logger.error("[POST /api/company-approvals] Invalid user!!");
       return res
         .status(400)
         .json({ success: false, message: "Invalid user!!" });
     }
-
+    
     // Add student and studentName to the request body
     const approvalData = {
       ...req.body,
       studentId: student, // Use _id as the student reference
       studentName: studentName, // Use the student's name from the user data
     };
-
+    
     // Create the new approval
     const newApproval = await CompanyApprovalDetails.create(approvalData);
-
+    
     // Find the corresponding StudentInternship document
     const studentInternship = await StudentInternship.findOne({ student });
-
+    
     if (!studentInternship) {
       return res.status(404).json({
         success: false,
         message: "Student internship record not found.",
       });
     }
-
+    
     // Push the new internship status ObjectId into the summerInternshipStatus array
     studentInternship.companyApprovalDetails.push(newApproval._id);
-
+    
     // Save the updated StudentInternship document
     await studentInternship.save();
-
+    
+    // Create notification for all admins
+    await createAdminNotification(student, studentName, newApproval);
+    
     logger.info(`[POST /api/company-approvals] Created ID: ${newApproval._id}`);
-
+    
     res.status(201).json({ success: true, data: newApproval });
   } catch (error) {
     logger.error(`[POST /api/company-approvals] Error: ${error.message}`);
     next(error);
+  }
+};
+
+// Helper function to create notification for all admins
+const createAdminNotification = async (studentId, studentName, approval) => {
+  try {
+    // Get all admin users from the database
+    const allAdmins = await Admins.find({});
+    
+    if (!allAdmins || allAdmins.length === 0) {
+      logger.warn("[Notification] No admin users found to notify");
+      return;
+    }
+    
+    // Format recipients array for notification
+    const recipients = allAdmins.map(admin => ({
+      id: admin._id,
+      model: "admin"
+    }));
+    
+    // Create notification
+    await Notification.createNotification({
+      sender: {
+        id: studentId,
+        model: "student",
+        name: studentName
+      },
+      recipients,
+      title: "New Company Approval Request",
+      message: `${studentName} has submitted a company approval request for ${approval.companyName || 'a company'}.`,
+      type: "COMPANY_APPROVAL_SUBMISSION",
+      // link: `/admin/company-approvals/${approval._id}`, // Link to view the approval details
+      priority: "medium"
+    });
+    
+    logger.info(`[Notification] Sent company approval notification to ${allAdmins.length} admin(s)`);
+  } catch (error) {
+    logger.error(`[Notification] Error creating admin notification: ${error.message}`);
+    // Don't throw the error as this is a secondary operation
   }
 };
 

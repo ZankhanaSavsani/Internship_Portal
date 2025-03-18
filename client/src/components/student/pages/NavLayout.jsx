@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Building2,
-  Users,
   FileText,
   CheckSquare,
   ClipboardList,
@@ -15,8 +14,6 @@ import {
 } from "lucide-react";
 import {
   DropdownMenu,
-  RadixDropdownMenuTrigger,
-  RadixDropdownMenuContent,
   CustomDropdownMenuItem,
   CustomDropdownMenuSeparator,
 } from "../../ui/dropdown-menu";
@@ -67,11 +64,11 @@ const NavLayout = ({ children }) => {
       text: "Weekly Reports",
       path: "/student/AddWeeklyReportPage",
     },
-    {
-      icon: <Users size={20} />,
-      text: "Mentor Selection",
-      path: "/student/mentor",
-    },
+    // {
+    //   icon: <Users size={20} />,
+    //   text: "Mentor Selection",
+    //   path: "/student/mentor",
+    // },
   ];
 
   const handleLogout = async () => {

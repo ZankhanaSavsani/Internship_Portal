@@ -51,7 +51,7 @@ const NavLayout = ({ children }) => {
     {
       icon: <Building2 size={20} />,
       text: "Company Approval",
-      path: "/admin/CompanyApprovalForm",
+      path: "/admin/ManageCompanyApprovals",
     },
     {
       icon: <FileBarChart size={20} />,

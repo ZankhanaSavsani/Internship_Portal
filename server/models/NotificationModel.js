@@ -28,7 +28,7 @@ const notificationSchema = new mongoose.Schema(
         model: {
           type: String,
           required: true,
-          enum: ["admin", "guide", "student"], 
+          enum: ["admin", "guide", "student"],
         },
         isRead: {
           type: Boolean,
@@ -72,6 +72,13 @@ const notificationSchema = new mongoose.Schema(
       semester: Number, // Target semester
     },
 
+    // Priority of the notification
+    priority: {
+      type: String,
+      enum: ["low", "medium", "high"],
+      default: "medium",
+    },
+
     // to share relevant link
     link: {
       type: String,
@@ -83,14 +90,22 @@ const notificationSchema = new mongoose.Schema(
         message: "Invalid URL format",
       },
     },
+
+    // Soft deletion fields
     isDeleted: {
       type: Boolean,
-      default: false
+      default: false,
     },
     deletedAt: {
       type: Date,
-      default: null
-    }
+      default: null,
+    },
+
+    // Expiry date for the notification
+    expiresAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true } // Automatically adds createdAt and updatedAt timestamps
 );
@@ -100,6 +115,7 @@ notificationSchema.index({ "sender.id": 1, createdAt: -1 }); // Index for retrie
 notificationSchema.index({ "recipients.id": 1, "recipients.isRead": 1, createdAt: -1 }); // Index for fetching unread notifications efficiently
 notificationSchema.index({ type: 1, createdAt: -1 }); // Index for filtering notifications by type
 notificationSchema.index({ "targetFilters.year": 1, "targetFilters.semester": 1 }); // Index for filtering broadcast messages
+notificationSchema.index({ isDeleted: 1 }); // Index for soft deletion
 
 // Static method to create a new notification
 notificationSchema.statics.createNotification = async function ({
@@ -110,18 +126,29 @@ notificationSchema.statics.createNotification = async function ({
   type,
   targetFilters = null,
   link = null,
+  priority = "medium",
+  expiresAt = null,
 }) {
   const notification = new this({
     sender,
-    recipients: recipients.map((recipient) => ({
-      id: recipient._id,
-      model: recipient.constructor.modelName,
-    })),
+    recipients: recipients.map((recipient) => {
+      // Handle case when recipient is already formatted with id and model
+      if (recipient.id && recipient.model) {
+        return recipient;
+      }
+      // Handle case when recipient is a Mongoose document
+      return {
+        id: recipient._id,
+        model: recipient.constructor.modelName.toLowerCase(),
+      };
+    }),
     title,
     message,
     type,
     targetFilters,
     link,
+    priority,
+    expiresAt,
   });
   return await notification.save();
 };
@@ -129,8 +156,16 @@ notificationSchema.statics.createNotification = async function ({
 // Optimized method to mark notifications as read for a user
 notificationSchema.statics.markAllAsReadForUser = async function (userId) {
   return await this.updateMany(
-    { "recipients.id": userId, "recipients.isRead": false },
-    { $set: { "recipients.$.isRead": true, "recipients.$.readAt": new Date() } }
+    { "recipients.id": userId }, // Find notifications where the user is a recipient
+    {
+      $set: {
+        "recipients.$[elem].isRead": true, // Update all matching recipients
+        "recipients.$[elem].readAt": new Date(),
+      },
+    },
+    {
+      arrayFilters: [{ "elem.id": userId }], // Filter to update all matching recipients
+    }
   );
 };
 
