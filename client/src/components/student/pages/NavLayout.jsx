@@ -83,7 +83,7 @@ const NavLayout = ({ children }) => {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 w-full bg-white z-50 px-4 py-3 border-b shadow-md flex justify-between items-center">
+      <div className="lg:hidden fixed top-0 w-full bg-white z-50 px-4 py-3 shadow-md flex justify-between items-center">
         <div className="h-12 flex items-center">
           <img
             src="/images/logo.png"
@@ -129,7 +129,7 @@ const NavLayout = ({ children }) => {
         }
       `}
       >
-        <div className="hidden lg:flex p-4 border-b bg-gray-100 justify-center items-center">
+        <div className="hidden lg:flex p-4 justify-center items-center">
           <div className="h-16 flex items-center">
             <img
               src="/images/logo.png"
@@ -158,7 +158,7 @@ const NavLayout = ({ children }) => {
         </nav>
 
         {/* User Menu Section */}
-        <div className="p-4 border-t bg-gray-100">
+        <div className="p-4">
           {/* Desktop Notifications */}
           <div className="hidden lg:flex justify-between items-center mb-4">
             <Button variant="ghost" size="icon" className="relative">
@@ -203,7 +203,7 @@ const NavLayout = ({ children }) => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 lg:min-h-screen bg-gray-50 mt-16 lg:mt-0">
+      <main className="flex-1 lg:min-h-screen bg-gray-50 mt-20 lg:mt-0">
         {children}
       </main>
     </div>

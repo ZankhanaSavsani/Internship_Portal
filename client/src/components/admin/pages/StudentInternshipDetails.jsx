@@ -273,13 +273,13 @@ const StudentInternshipDetails = () => {
     return (
       <div className="space-y-8">
         {/* Overall Progress Dashboard */}
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+        <div className="bg-blue-700 rounded-xl shadow-lg p-6 text-white">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold">Internship Progress</h2>
             <div className="bg-white bg-opacity-20 px-4 py-1 rounded-full text-sm font-medium">
               {internshipData.weeklyReports.length}{" "}
-              {internshipData.weeklyReports.length === 1 ? "Week" : "Weeks"}{" "}
-              Completed
+              {/* {internshipData.weeklyReports.length === 1 ? "Week" : "Weeks"}{" "} */}
+              Submission
             </div>
           </div>
 
@@ -647,7 +647,7 @@ const StudentInternshipDetails = () => {
     return (
       <div className="space-y-8">
         {/* Top Dashboard Card */}
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+        <div className="bg-blue-700 rounded-xl shadow-lg p-6 text-white">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold">Company Approval Status</h2>
             <div className="bg-white bg-opacity-20 px-4 py-1 rounded-full text-sm font-medium">
@@ -1238,7 +1238,7 @@ const StudentInternshipDetails = () => {
     return (
       <div className="space-y-8">
         {/* Top Dashboard Card */}
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+        <div className="bg-blue-700 rounded-xl shadow-lg p-6 text-white">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold">Summer Internship Status</h2>
             <div className="bg-white bg-opacity-20 px-4 py-1 rounded-full text-sm font-medium">
@@ -1624,7 +1624,7 @@ const StudentInternshipDetails = () => {
     return (
       <div className="space-y-8">
         {/* Top Dashboard Card */}
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+        <div className="bg-blue-700 rounded-xl shadow-lg p-6 text-white">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold">Summer Internship Completion</h2>
             <div className="bg-white bg-opacity-20 px-4 py-1 rounded-full text-sm font-medium">
@@ -1989,7 +1989,7 @@ const StudentInternshipDetails = () => {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+      <div className="bg-blue-700 rounded-xl shadow-lg p-6 text-white">
         <h1 className="text-2xl md:text-3xl font-bold text-white">
           Student Internship Management
         </h1>
@@ -2035,7 +2035,7 @@ const StudentInternshipDetails = () => {
           <div className="w-full md:w-1/3 flex items-end">
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 flex items-center justify-center"
+              className="px-4 py-2 bg-blue-700 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 flex items-center justify-center"
               disabled={loading}
             >
               {loading ? (
@@ -2151,7 +2151,7 @@ const StudentInternshipDetails = () => {
                     <button
                       onClick={handleChangeGuide}
                       disabled={isSubmitting}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 flex items-center justify-center disabled:bg-blue-300 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-blue-700 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 flex items-center justify-center disabled:bg-blue-300 disabled:cursor-not-allowed"
                     >
                       {isSubmitting ? (
                         <>

@@ -39,6 +39,7 @@ const downloadRoutes = require('./routes/downloadRoutes');
 const uploadRoutes = require("./routes/uploadRoutes");
 const guideAllocationRoutes = require("./routes/guideAllocationRoutes");
 const studentInternshipRoutes = require("./routes/studentInternshipRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 
 // Use Routes
@@ -54,6 +55,7 @@ app.use("/api/studentInternship",studentInternshipRoutes);
 app.use('/api', downloadRoutes);
 app.use("/api", uploadRoutes);
 app.use("/api/guide-allocation", guideAllocationRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Server Listening
 const PORT = process.env.PORT || 5000;

@@ -43,6 +43,7 @@ import DownloadPage from "./components/admin/pages/DownloadPage";
 import ManageInternshipStatus from "./components/admin/pages/ManageInternshipStatus";
 import ManageInternshipCompletionStatus from "./components/admin/pages/ManageInternshipCompletionStatus";
 import ManageWeeklyReports from "./components/admin/pages/ManageWeeklyReports";
+import AdminNotificationsPage from "./components/admin/pages/AdminNotificationsPage";
 
 function App() {
   return (
@@ -92,6 +93,8 @@ function App() {
             <Route path="/admin/ManageInternshipStatus" element={<ManageInternshipStatus />} />
             <Route path="/admin/ManageInternshipCompletionStatus" element={<ManageInternshipCompletionStatus />} />
             <Route path="/admin/ManageWeeklyReports" element={<ManageWeeklyReports />} />
+            <Route path="/admin/AdminNotificationsPage" element={<AdminNotificationsPage />} />
+  
           </Route>
         </Route>
 

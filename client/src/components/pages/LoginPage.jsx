@@ -174,63 +174,88 @@ const InternshipLoginForm = () => {
           </div>
         )}
         {/* Logo/Brand Area */}
-        <div className="flex justify-center mb-6">
-          <div className="p-3 bg-blue-50 rounded-xl">
-            <Briefcase className="h-8 w-8 text-blue-600" />
+        <div className="flex justify-center mb-4">
+          {/* <div className="flex justify-center mb-6"> */}
+          <div className="h-16 w-40 flex items-center justify-center">
+            <img
+              src="/images/logo.png"
+              alt="Institution Logo"
+              className="max-h-full max-w-full object-contain hover:scale-105 transition-transform duration-300"
+            />
           </div>
+          {/* </div> */}
         </div>
 
         {/* Header */}
         <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+          {/* <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
             Internship Portal
-          </h1>
+          </h1> */}
           <p className="text-gray-600">
             Welcome to your internship management system
-            <span className="text-blue-600 block mt-1">
+            {/* <span className="text-blue-600 block mt-1">
               Connect. Learn. Grow.
-            </span>
+            </span> */}
           </p>
         </div>
 
         {/* User Type Selector */}
-        <div className="bg-gray-50 rounded-xl p-1.5">
-          <div className="flex rounded-lg bg-white shadow-sm p-1">
+        <div className="bg-gray-100 rounded-xl">
+          <div className="flex border-2 border-gray-200 rounded-xl overflow-hidden">
             <button
               type="button"
               onClick={() => setSelectedTab("student")}
-              className={`flex-1 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                selectedTab === "student"
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-gray-600 hover:bg-gray-50"
-              }`}
+              className={`
+        flex-1 px-4 py-3 flex items-center justify-center space-x-2 transition-all duration-300
+        ${
+          selectedTab === "student"
+            ? "bg-blue-600 text-white"
+            : "bg-white text-gray-500 hover:bg-gray-50"
+        }
+        ${
+          selectedTab === "student"
+            ? "border-r border-blue-500"
+            : "border-r border-gray-200"
+        }
+      `}
             >
-              <GraduationCap className="h-4 w-4" />
-              Student
+              <GraduationCap className="h-5 w-5" />
+              <span className="font-medium">Student</span>
             </button>
             <button
               type="button"
               onClick={() => setSelectedTab("guide")}
-              className={`flex-1 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                selectedTab === "guide"
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-gray-600 hover:bg-gray-50"
-              }`}
+              className={`
+        flex-1 px-4 py-3 flex items-center justify-center space-x-2 transition-all duration-300
+        ${
+          selectedTab === "guide"
+            ? "bg-blue-600 text-white"
+            : "bg-white text-gray-500 hover:bg-gray-50"
+        }
+        ${
+          selectedTab === "guide"
+            ? "border-r border-blue-500"
+            : "border-r border-gray-200"
+        }
+      `}
             >
-              <Users className="h-4 w-4" />
-              Guide
+              <Users className="h-5 w-5" />
+              <span className="font-medium">Guide</span>
             </button>
             <button
               type="button"
               onClick={() => setSelectedTab("admin")}
-              className={`flex-1 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                selectedTab === "admin"
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-gray-600 hover:bg-gray-50"
-              }`}
+              className={`
+        flex-1 px-4 py-3 flex items-center justify-center space-x-2 transition-all duration-300
+        ${
+          selectedTab === "admin"
+            ? "bg-blue-600 text-white"
+            : "bg-white text-gray-500 hover:bg-gray-50"
+        }
+      `}
             >
-              <UserCog className="h-4 w-4" />
-              Admin
+              <UserCog className="h-5 w-5" />
+              <span className="font-medium">Admin</span>
             </button>
           </div>
         </div>

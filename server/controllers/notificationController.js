@@ -1,0 +1,110 @@
+const Notification = require("../models/NotificationModel");
+
+// Fetch notifications for a user (admin, guide, or student)
+exports.fetchNotifications = async (req, res) => {
+  try {
+    const userId = req.user._id; // Assuming user ID is available in the request (from authentication middleware)
+    const userModel = req.user.constructor.modelName.toLowerCase(); // Get the user's model name (admin, guide, or student)
+
+    // Fetch notifications where the user is a recipient
+    const notifications = await Notification.find({
+      "recipients.id": userId,
+      "recipients.model": userModel,
+      isDeleted: false, // Exclude soft-deleted notifications
+    })
+      .sort({ createdAt: -1 }) // Sort by latest first
+      .exec();
+
+    res.status(200).json({ success: true, notifications });
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// Create a notification (admin can send messages to students and guides)
+exports.createNotification = async (req, res) => {
+  try {
+    const { recipients, title, message, type, targetFilters, link, priority, expiresAt } = req.body;
+    const sender = {
+      id: req.user._id, // Assuming the sender is the authenticated admin
+      model: req.user.constructor.modelName.toLowerCase(), // Get the sender's model name
+      name: req.user.name, // Assuming the sender has a name field
+    };
+
+    // Create the notification
+    const notification = await Notification.createNotification({
+      sender,
+      recipients,
+      title,
+      message,
+      type,
+      targetFilters,
+      link,
+      priority,
+      expiresAt,
+    });
+
+    res.status(201).json({ success: true, notification });
+  } catch (error) {
+    console.error("Error creating notification:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// Mark all notifications as read for a user
+exports.markAllAsRead = async (req, res) => {
+  try {
+    const userId = req.user._id; // Assuming user ID is available in the request
+
+    // Mark all notifications as read for the user
+    await Notification.markAllAsReadForUser(userId);
+
+    res.status(200).json({ success: true, message: "All notifications marked as read" });
+  } catch (error) {
+    console.error("Error marking notifications as read:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// Mark a single notification as read for a user
+exports.markAsRead = async (req, res) => {
+  try {
+    const notificationId = req.params.notificationId;
+    const userId = req.user._id; // Assuming user ID is available in the request
+
+    // Find the notification
+    const notification = await Notification.findById(notificationId);
+    if (!notification) {
+      return res.status(404).json({ success: false, message: "Notification not found" });
+    }
+
+    // Mark the notification as read for the user
+    await notification.markAsRead(userId);
+
+    res.status(200).json({ success: true, message: "Notification marked as read" });
+  } catch (error) {
+    console.error("Error marking notification as read:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+exports.getUnreadNotificationCount = async (req, res) => {
+    try {
+      const userId = req.user._id;
+      const userModel = req.user.constructor.modelName.toLowerCase();
+  
+      // Count unread notifications for the user
+      const unreadCount = await Notification.countDocuments({
+        "recipients.id": userId,
+        "recipients.model": userModel,
+        "recipients.read": false, // Only count unread notifications
+        isDeleted: false,
+      });
+  
+      res.status(200).json({ success: true, unreadCount });
+    } catch (error) {
+      console.error("Error fetching unread notification count:", error);
+      res.status(500).json({ success: false, message: "Internal server error" });
+    }
+  };  

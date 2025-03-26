@@ -1040,7 +1040,7 @@ const ManageCompanyApprovals = () => {
                   onClick={() => setStatusFilter(status)}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     statusFilter === status
-                      ? "bg-indigo-600 text-white"
+                      ? "bg-blue-700 text-white"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
