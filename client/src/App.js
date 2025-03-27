@@ -21,29 +21,34 @@ import GuideManagementPages from "./components/admin/pages/GuideManagementPages"
 import AddStudentPage from "./components/admin/pages/AddStudentPage";
 import EditStudentPage from "./components/admin/pages/EditStudentPage";
 import DeleteStudentPage from "./components/admin/pages/DeleteStudentPage";
-import AddGuide from './components/admin/pages/AddGuide';
-import EditGuide from './components/admin/pages/EditGuide';
-import DeleteGuide from './components/admin/pages/DeleteGuide';
-import AdminManagementPages from './components/admin/pages/AdminManagementPages';
-import AddAdmin from './components/admin/pages/AddAdmin';
-import EditAdmin from './components/admin/pages/EditAdmin';
-import DeleteAdmin from './components/admin/pages/DeleteAdmin';
+import AddGuide from "./components/admin/pages/AddGuide";
+import EditGuide from "./components/admin/pages/EditGuide";
+import DeleteGuide from "./components/admin/pages/DeleteGuide";
+import AdminManagementPages from "./components/admin/pages/AdminManagementPages";
+import AddAdmin from "./components/admin/pages/AddAdmin";
+import EditAdmin from "./components/admin/pages/EditAdmin";
+import DeleteAdmin from "./components/admin/pages/DeleteAdmin";
 import AdminProfile from "./components/admin/pages/AdminProfile";
 import GuideAllocationForm from "./components/admin/pages/GuideAllocationForm";
 import GuideAllocationList from "./components/admin/pages/GuideAllocationList";
-
-// Auth Components
-import LoginPage from "./components/pages/LoginPage";
-
-import { AuthProvider } from "./components/layouts/AuthProvider";
-import ProtectedRoute from "./components/layouts/ProtectedRoute";
-import WeeklyReport from "./components/admin/pages/WeeklyReport";
 import StudentInternshipDetails from "./components/admin/pages/StudentInternshipDetails";
 import DownloadPage from "./components/admin/pages/DownloadPage";
 import ManageInternshipStatus from "./components/admin/pages/ManageInternshipStatus";
 import ManageInternshipCompletionStatus from "./components/admin/pages/ManageInternshipCompletionStatus";
 import ManageWeeklyReports from "./components/admin/pages/ManageWeeklyReports";
 import AdminNotificationsPage from "./components/admin/pages/AdminNotificationsPage";
+
+// Guide Components
+import GuideWeeklyReports from "./components/guide/pages/GuideWeeklyReports";
+import GuideLayout from "./components/layouts/GuideLayout";
+
+// Auth Components
+import LoginPage from "./components/pages/LoginPage";
+
+import { AuthProvider } from "./components/layouts/AuthProvider";
+import ProtectedRoute from "./components/layouts/ProtectedRoute";
+
+
 
 function App() {
   return (
@@ -55,46 +60,114 @@ function App() {
         {/* Student routes */}
         <Route element={<ProtectedRoute allowedRoles={["student"]} />}>
           <Route element={<StudentLayout />}>
-            <Route path="/student" element={<Navigate to="/student/StudentProfile" replace />} />
+            <Route
+              path="/student"
+              element={<Navigate to="/student/StudentProfile" replace />}
+            />
             <Route path="/student/onboarding" element={<OnboardingPage />} />
             <Route path="/student/Dashboard" element={<Dashboard />} />
-            <Route path="/student/CompanyApprovalForm" element={<CompanyApprovalForm />} />
-            <Route path="/student/WeeklyReportForm" element={<WeeklyReportForm />} />
-            <Route path="/student/AddWeeklyReportPage" element={<AddWeeklyReportPage />} />
-            <Route path="/student/SummerInternshipCompletionForm" element={<SummerInternshipCompletionForm />} />
-            <Route path="/student/SummerInternshipStatusForm" element={<SummerInternshipStatusForm />} />
-            <Route path="/student/StudentProfile" element={<StudentProfile />} />
+            <Route
+              path="/student/CompanyApprovalForm"
+              element={<CompanyApprovalForm />}
+            />
+            <Route
+              path="/student/WeeklyReportForm"
+              element={<WeeklyReportForm />}
+            />
+            <Route
+              path="/student/AddWeeklyReportPage"
+              element={<AddWeeklyReportPage />}
+            />
+            <Route
+              path="/student/SummerInternshipCompletionForm"
+              element={<SummerInternshipCompletionForm />}
+            />
+            <Route
+              path="/student/SummerInternshipStatusForm"
+              element={<SummerInternshipStatusForm />}
+            />
+            <Route
+              path="/student/StudentProfile"
+              element={<StudentProfile />}
+            />
           </Route>
         </Route>
 
         {/* Admin routes */}
         <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
           <Route element={<AdminLayout />}>
-            <Route path="/admin" element={<Navigate to="/admin/AdminProfile" replace />} />
-            <Route path="/admin/ManageCompanyApprovals" element={<ManageCompanyApprovals />} />
-            <Route path="/admin/StudentManagementPages" element={<StudentManagementPages />} />
+            <Route
+              path="/admin"
+              element={<Navigate to="/admin/AdminProfile" replace />}
+            />
+            <Route
+              path="/admin/ManageCompanyApprovals"
+              element={<ManageCompanyApprovals />}
+            />
+            <Route
+              path="/admin/StudentManagementPages"
+              element={<StudentManagementPages />}
+            />
             <Route path="/admin/AddStudent" element={<AddStudentPage />} />
             <Route path="/admin/EditStudent" element={<EditStudentPage />} />
-            <Route path="/admin/DeleteStudent" element={<DeleteStudentPage />} />
+            <Route
+              path="/admin/DeleteStudent"
+              element={<DeleteStudentPage />}
+            />
             <Route path="/admin/AddGuidePage" element={<AddGuide />} />
             <Route path="/admin/EditGuide" element={<EditGuide />} />
             <Route path="/admin/DeleteGuide" element={<DeleteGuide />} />
             <Route path="/admin/AddAdmin" element={<AddAdmin />} />
             <Route path="/admin/EditAdmin" element={<EditAdmin />} />
             <Route path="/admin/DeleteAdmin" element={<DeleteAdmin />} />
-            <Route path="/admin/GuideManagementPages" element={<GuideManagementPages />} />
-            <Route path="/admin/AdminManagementPages" element={<AdminManagementPages />} />
+            <Route
+              path="/admin/GuideManagementPages"
+              element={<GuideManagementPages />}
+            />
+            <Route
+              path="/admin/AdminManagementPages"
+              element={<AdminManagementPages />}
+            />
             <Route path="/admin/AdminProfile" element={<AdminProfile />} />
-            <Route path="/admin/WeeklyReport" element={<WeeklyReport />} />
-            <Route path="/admin/GuideAllocationForm" element={<GuideAllocationForm />} />
-            <Route path="/admin/GuideAllocationList" element={<GuideAllocationList />} />
-            <Route path="/admin/StudentInternshipDetails" element={<StudentInternshipDetails />} />
+            <Route
+              path="/admin/GuideAllocationForm"
+              element={<GuideAllocationForm />}
+            />
+            <Route
+              path="/admin/GuideAllocationList"
+              element={<GuideAllocationList />}
+            />
+            <Route
+              path="/admin/StudentInternshipDetails"
+              element={<StudentInternshipDetails />}
+            />
             <Route path="/admin/DownloadPage" element={<DownloadPage />} />
-            <Route path="/admin/ManageInternshipStatus" element={<ManageInternshipStatus />} />
-            <Route path="/admin/ManageInternshipCompletionStatus" element={<ManageInternshipCompletionStatus />} />
-            <Route path="/admin/ManageWeeklyReports" element={<ManageWeeklyReports />} />
-            <Route path="/admin/AdminNotificationsPage" element={<AdminNotificationsPage />} />
-  
+            <Route
+              path="/admin/ManageInternshipStatus"
+              element={<ManageInternshipStatus />}
+            />
+            <Route
+              path="/admin/ManageInternshipCompletionStatus"
+              element={<ManageInternshipCompletionStatus />}
+            />
+            <Route
+              path="/admin/ManageWeeklyReports"
+              element={<ManageWeeklyReports />}
+            />
+            <Route
+              path="/admin/AdminNotificationsPage"
+              element={<AdminNotificationsPage />}
+            />
+          </Route>
+        </Route>
+
+        {/* Guide routes */}
+        <Route element={<ProtectedRoute allowedRoles={["guide"]} />}>
+          <Route element={<GuideLayout />}>
+            <Route
+              path="/guide/ManageWeeklyReports"
+              element={<GuideWeeklyReports />}
+            />
           </Route>
         </Route>
 

@@ -3,6 +3,7 @@ const logger = require("../utils/logger");
 const mongoose = require("mongoose");
 const StudentInternship = require("../models/StudentInternshipModel");
 
+
 // @desc   Create a new weekly report
 // @route  POST /api/weekly-reports
 exports.createWeeklyReport = async (req, res, next) => {
@@ -272,6 +273,246 @@ exports.restoreWeeklyReport = async (req, res, next) => {
     res.status(200).json({ success: true, message: "Weekly report restored successfully", data: report });
   } catch (error) {
     logger.error(`[PATCH /api/weekly-reports/${req.params.id}/restore] Error: ${error.message}`);
+    next(error);
+  }
+};
+
+// -------------------------------- Guide-Specific Weekly Report Controllers ---------------------------------------
+
+// @desc   Get all weekly reports for students assigned to the guide
+// @route  GET /api/weeklyReport/guide
+exports.getGuideWeeklyReports = async (req, res, next) => {
+  try {
+    const guideId = req.user._id; // Get guide ID from authenticated user
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    if (page < 1 || limit < 1) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Invalid pagination parameters" 
+      });
+    }
+
+    const skip = (page - 1) * limit;
+
+    // Get all student internships assigned to this guide
+    const internships = await StudentInternship.find({ 
+      guide: guideId,
+      isDeleted: false
+    }).select('student weeklyReports');
+
+    // Extract all student IDs and report IDs
+    const studentIds = internships.map(i => i.student);
+    const reportIds = internships.flatMap(i => i.weeklyReports);
+
+    // Dynamic filtering
+    const filterOptions = {
+      _id: { $in: reportIds },
+      student: { $in: studentIds },
+      isDeleted: false
+    };
+
+    // Add additional filters if provided
+    if (req.query.studentName) {
+      filterOptions.studentName = { $regex: req.query.studentName, $options: "i" };
+    }
+    if (req.query.reportWeek) {
+      filterOptions.reportWeek = parseInt(req.query.reportWeek);
+    }
+    if (req.query.approvalStatus) {
+      filterOptions.approvalStatus = req.query.approvalStatus;
+    }
+
+    // Fetch reports with population, sorting and pagination
+    const reports = await WeeklyReport.find(filterOptions)
+      .populate("student", "name email studentId")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Count total matching reports
+    const total = await WeeklyReport.countDocuments(filterOptions);
+
+    res.status(200).json({
+      success: true,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+      data: reports,
+    });
+  } catch (error) {
+    logger.error(`[GET /api/weeklyReport/guide] Error: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc   Get a single weekly report for a student assigned to the guide
+// @route  GET /api/weeklyReport/guide/:id
+exports.getGuideWeeklyReportById = async (req, res, next) => {
+  try {
+    const guideId = req.user._id;
+    const reportId = req.params.id;
+
+    // First verify the report belongs to a student assigned to this guide
+    const internship = await StudentInternship.findOne({
+      guide: guideId,
+      weeklyReports: reportId,
+      isDeleted: false
+    });
+
+    if (!internship) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Weekly report not found or not assigned to you" 
+      });
+    }
+
+    // Then get the report details
+    const report = await WeeklyReport.findOne({
+      _id: reportId,
+      isDeleted: false
+    }).populate("student", "name email studentId");
+
+    if (!report) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Weekly report not found" 
+      });
+    }
+
+    res.status(200).json({ 
+      success: true,
+      data: report 
+    });
+  } catch (error) {
+    logger.error(`[GET /api/weeklyReport/guide/${req.params.id}] Error: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc   Update approval status for a weekly report (guide only)
+// @route  PATCH /api/weeklyReport/guide/:id/approval
+exports.updateGuideApprovalStatus = async (req, res, next) => {
+  try {
+    const guideId = req.user._id;
+    const { id } = req.params;
+    const { approvalStatus, comments } = req.body;
+
+    // Validate input
+    if (!approvalStatus || !["Pending", "Approved", "Rejected"].includes(approvalStatus)) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Invalid approval status" 
+      });
+    }
+
+    if (approvalStatus === "Rejected" && !comments) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Comments are required for rejected status" 
+      });
+    }
+
+    // Verify the report belongs to a student assigned to this guide
+    const internship = await StudentInternship.findOne({
+      guide: guideId,
+      weeklyReports: id,
+      isDeleted: false
+    });
+
+    if (!internship) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Weekly report not found or not assigned to you" 
+      });
+    }
+
+    // Update the report
+    const report = await WeeklyReport.findOneAndUpdate(
+      { _id: id, isDeleted: false },
+      { 
+        approvalStatus,
+        comments: approvalStatus === "Rejected" ? comments : null,
+        approvedBy: guideId,
+        approvalDate: new Date()
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!report) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Weekly report not found" 
+      });
+    }
+
+    logger.info(`[PATCH /api/weeklyReport/guide/${id}/approval] Updated by guide ${guideId}`);
+    res.status(200).json({ 
+      success: true,
+      data: report 
+    });
+  } catch (error) {
+    logger.error(`[PATCH /api/weeklyReport/guide/${id}/approval] Error: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc   Add marks to a weekly report (guide only)
+// @route  PATCH /api/weeklyReport/guide/:id/marks
+exports.addGuideMarks = async (req, res, next) => {
+  try {
+    const guideId = req.user._id;
+    const { id } = req.params;
+    const { marks } = req.body;
+
+    // Validate input
+    if (marks === undefined || marks < 0 || marks > 10) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Marks must be between 0 and 10" 
+      });
+    }
+
+    // Verify the report belongs to a student assigned to this guide
+    const internship = await StudentInternship.findOne({
+      guide: guideId,
+      weeklyReports: id,
+      isDeleted: false
+    });
+
+    if (!internship) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Weekly report not found or not assigned to you" 
+      });
+    }
+
+    // Update the marks
+    const report = await WeeklyReport.findOneAndUpdate(
+      { _id: id, isDeleted: false },
+      { 
+        marks,
+        markedBy: guideId,
+        markingDate: new Date()
+      },
+      { new: true }
+    );
+
+    if (!report) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Weekly report not found" 
+      });
+    }
+
+    logger.info(`[PATCH /api/weeklyReport/guide/${id}/marks] Updated by guide ${guideId}`);
+    res.status(200).json({ 
+      success: true,
+      data: report 
+    });
+  } catch (error) {
+    logger.error(`[PATCH /api/weeklyReport/guide/${id}/marks] Error: ${error.message}`);
     next(error);
   }
 };

@@ -8,6 +8,10 @@ const {
   updateApprovalStatus,
   addMarks,
   restoreWeeklyReport,
+  getGuideWeeklyReports,
+  getGuideWeeklyReportById,
+  updateGuideApprovalStatus,
+  addGuideMarks
 } = require("../controllers/WeeklyReportController");
 
 const validateReport = require("../middleware/validateWeeklyReport");
@@ -33,14 +37,14 @@ router.get("/", validateToken, checkRoleAccess(["admin"]), getAllWeeklyReports);
 router.get(
   "/:id",
   validateToken,
-  checkRoleAccess(["student", "guide", "admin"]),
+  checkRoleAccess(["student", "admin"]),
   getWeeklyReportById
 );
 // Update a weekly report
 router.put(
   "/:id",
   validateToken,
-  checkRoleAccess(["student", "guide", "admin"]),
+  checkRoleAccess(["student", "admin"]),
   validateReport,
   updateWeeklyReport
 );
@@ -55,14 +59,14 @@ router.delete(
 router.patch(
   "/:id/approval",
   validateToken,
-  checkRoleAccess(["admin", "guide"]),
+  checkRoleAccess(["admin"]),
   updateApprovalStatus
 );
 // Add marks to a weekly report
 router.patch(
   "/:id/marks",
   validateToken,
-  checkRoleAccess(["admin", "guide"]),
+  checkRoleAccess(["admin"]),
   addMarks
 );
 // Restore a soft-deleted weekly report
@@ -71,6 +75,38 @@ router.patch(
   validateToken,
   checkRoleAccess(["admin"]),
   restoreWeeklyReport
+);
+
+// Get all weekly reports for students assigned to the guide
+router.get(
+  "/guide",
+  validateToken,
+  checkRoleAccess(["guide"]),
+  getGuideWeeklyReports
+);
+
+// Get a single weekly report for a student assigned to the guide
+router.get(
+  "/guide/:id",
+  validateToken,
+  checkRoleAccess(["guide"]),
+  getGuideWeeklyReportById
+);
+
+// Update approval status for a weekly report
+router.patch(
+  "/guide/:id/approval",
+  validateToken,
+  checkRoleAccess(["guide"]),
+  updateGuideApprovalStatus
+);
+
+// Add marks to a weekly report
+router.patch(
+  "/guide/:id/marks",
+  validateToken,
+  checkRoleAccess(["guide"]),
+  addGuideMarks
 );
 
 module.exports = router;

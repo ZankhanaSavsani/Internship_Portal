@@ -1,19 +1,25 @@
 // components/layouts/GuideLayout.js
 import React from 'react';
 import { useAuth } from './AuthProvider';
-import GuideSidebar from '../navigation/GuideSidebar';
-import Header from '../navigation/Header';
+import { Outlet, useLocation } from "react-router-dom";
+import GuideSidebar from '../guide/pages/NavLayout';
 
 const GuideLayout = ({ children }) => {
   const { user, logout } = useAuth();
+  const location = useLocation();
+    const excludePaths = ["/admin/login"];
+    const showLayout = !excludePaths.includes(location.pathname);
+  
+     if (!showLayout) {
+        return <Outlet />;
+      }
 
   return (
     <div className="flex h-screen bg-gray-100">
       <GuideSidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header username={user?.username} role="Guide" onLogout={logout} />
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4">
-          {children}
+          <Outlet />
         </main>
       </div>
     </div>
