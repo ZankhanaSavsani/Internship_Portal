@@ -3,6 +3,8 @@ const Guide = require("../models/GuideModel");
 const logger = require("../utils/logger");
 const { sendEmail } = require("../utils/mailer");
 const crypto = require("crypto"); // For generating random passwords
+const bcrypt = require("bcryptjs");
+const mongoose = require("mongoose");
 
 // @desc   Create a new guide
 // @route  POST /api/guide
@@ -20,20 +22,22 @@ exports.createGuide = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         message: "A guide with this username or email already exists.",
+        error: error.message,
       });
     }
-
-    // Generate random password before creating guide
-    const plainPassword = crypto.randomBytes(8).toString("hex");
 
     // Create a new guide with a temporary password
     const newGuide = new Guide({
       username,
       guideName,
       email,
-      password: plainPassword, // This will be hashed in the pre-save hook
     });
     await newGuide.save();
+
+    const newGuideWithPassword = await Guide.findById(newGuide._id).select(
+      "+password"
+    );
+    const plainPassword = newGuideWithPassword.password; // Get the generated password
 
     logger.info(`[POST /api/guide] Created new guide: ${newGuide.username}`);
 
@@ -325,6 +329,7 @@ exports.createGuide = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         message: "A guide with the same username or email already exists.",
+        error: error.message,
       });
     }
 
@@ -332,6 +337,7 @@ exports.createGuide = async (req, res, next) => {
     res.status(500).json({
       success: false,
       message: "An error occurred while adding the guide.",
+      error: error.message,
     });
   }
 };
@@ -340,34 +346,50 @@ exports.createGuide = async (req, res, next) => {
 // @route  PUT /api/guide/:id
 exports.updateGuide = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { username, guideName, email, password } = req.body;
+    const guideId = req.params.id; // Get the guide's _id from the URL params
+    const updateData = req.body; // Get all update data from the request body
 
-    // Check if the guide exists and is not deleted
-    const guide = await Guide.findOne({ _id: id, isDeleted: false });
+    // Validate updateData (optional, but recommended)
+    if (!updateData || Object.keys(updateData).length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No data provided to update" });
+    }
 
-    if (!guide) {
+    // Check if the password is being updated
+    if (updateData.password) {
+      // Hash the new password
+      updateData.password = await bcrypt.hash(updateData.password, 10);
+    }
+
+    // Find and update the guide
+    const updatedGuide = await Guide.findOneAndUpdate(
+      { _id: guideId, isDeleted: false }, // Query
+      updateData, // Update data
+      { new: true, runValidators: true } // Options
+    );
+
+    // If no guide is found, return a 404 error
+    if (!updatedGuide) {
       return res.status(404).json({
         success: false,
-        message: "Guide not found or already deleted.",
+        message: "Guide not found or has been deleted",
+        error: error.message,
       });
     }
 
-    // Update guide fields
-    guide.username = username || guide.username;
-    guide.guideName = guideName || guide.guideName;
-    guide.email = email || guide.email;
-    guide.password = password || guide.password;
+    // Return the updated guide data
+    res.status(200).json({ success: true, data: updatedGuide });
 
-    await guide.save();
-
-    logger.info(`[PUT /api/guide/${id}] Guide updated: ${guide.username}`);
-    res.status(200).json({
-      success: true,
-      data: guide,
-    });
+    // Log the successful update
+    logger.info(
+      `[PUT /api/guide/${guideId}] Guide updated: ${updatedGuide.username}`
+    );
   } catch (error) {
+    // Log the error
     logger.error(`[PUT /api/guide/${req.params.id}] Error: ${error.message}`);
+
+    // Pass the error to the error handler or return it
     next(error);
   }
 };
@@ -376,7 +398,7 @@ exports.updateGuide = async (req, res, next) => {
 // @route  DELETE /api/guide/:id
 exports.deleteGuide = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
 
     // Check if the guide exists
     const guide = await Guide.findOne({ _id: id, isDeleted: false });
@@ -385,6 +407,7 @@ exports.deleteGuide = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: "Guide not found or already deleted.",
+        error: error.message,
       });
     }
 
@@ -393,13 +416,13 @@ exports.deleteGuide = async (req, res, next) => {
     guide.deletedAt = new Date();
     await guide.save();
 
-    logger.info(
-      `[DELETE /api/guide/${id}] Soft deleted guide: ${guide.username}`
-    );
     res.status(200).json({
       success: true,
       message: "Guide record soft deleted successfully.",
     });
+    logger.info(
+      `[DELETE /api/guide/${id}] Soft deleted guide: ${guide.username}`
+    );
   } catch (error) {
     logger.error(
       `[DELETE /api/guide/${req.params.id}] Error: ${error.message}`
@@ -421,6 +444,7 @@ exports.getGuideById = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: "Guide not found or already deleted.",
+        error: error.message,
       });
     }
 
@@ -431,6 +455,86 @@ exports.getGuideById = async (req, res, next) => {
   } catch (error) {
     logger.error(`[GET /api/guide/${req.params.id}] Error: ${error.message}`);
     next(error);
+  }
+};
+
+// @desc   Change guide password
+// @route  PATCH /api/guides/change-password/:id
+// @access Private (only the guide can change their own password)
+exports.changeGuidePassword = async (req, res, next) => {
+  try {
+    const id = req.user._id; // Ensure this comes from authentication middleware
+    const { currentPassword, newPassword } = req.body;
+
+    // Validate input
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password and new password are required",
+        error: error.message,
+      });
+    }
+
+    // Additional password strength validation (optional)
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be at least 8 characters long",
+        error: error.message,
+      });
+    }
+
+    // Find the guide by ID
+    const guide = await Guide.findById(id).select("+password"); // Ensure password field is included
+    if (!guide) {
+      return res.status(404).json({
+        success: false,
+        message: "Guide not found",
+        error: error.message,
+      });
+    }
+
+    // Verify the current password
+    const isMatch = await guide.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Current password is incorrect",
+        error: error.message,
+      });
+    }
+
+    // Check if new password is different from current
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be different from current password",
+        error: error.message,
+      });
+    }
+
+    // Update the password
+    guide.password = newPassword;
+    await guide.save();
+
+    // Log the password change (without logging the actual password)
+    logger.info(
+      `[PATCH /api/guides/change-password/${id}] Password updated for guide ${guide.username}`
+    );
+
+    // Return success response
+    res.status(200).json({
+      success: true,
+      message: "Password updated successfully",
+    });
+  } catch (error) {
+    logger.error(`[PATCH /api/guides/change-password] Error: ${error.message}`);
+    next(error); // Or use the error response below if not using error middleware
+    // res.status(500).json({
+    //   success: false,
+    //   message: "Internal server error",
+    //   error: error.message,
+    // });
   }
 };
 
@@ -446,5 +550,149 @@ exports.getAllGuides = async (req, res, next) => {
   } catch (error) {
     logger.error(`[GET /api/guide] Error: ${error.message}`);
     next(error);
+  }
+};
+
+// @desc   Fetch guide by email (admins can fetch deleted guides)
+// @route  GET /api/guides/fetch
+// @access Private
+exports.fetchGuide = async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    // Validate email is provided
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+        error: error.message,
+      });
+    }
+
+    // Email format validation (matches your schema)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid email address",
+        error: error.message,
+      });
+    }
+
+    // Convert to lowercase (matches your schema)
+    const lowercaseEmail = email.toLowerCase();
+
+    // Build query based on admin status (from your middleware)
+    const query = { email: lowercaseEmail };
+    if (!req.user.isAdmin) {
+      query.isDeleted = false;
+    }
+
+    // Find the guide
+    const guide = await Guide.findOne(query);
+
+    if (!guide) {
+      return res.status(404).json({
+        success: false,
+        message: req.user.isAdmin
+          ? "No guide found with this email (including deleted records)"
+          : "Guide not found",
+        error: error.message
+      });
+    }
+
+    // Prepare response data
+    const responseData = {
+      _id: guide._id,
+      username: guide.username,
+      guideName: guide.guideName,
+      email: guide.email,
+      role: guide.role,
+      createdAt: guide.createdAt,
+      updatedAt: guide.updatedAt,
+    };
+
+    // Add deletion info for admin
+    if (req.user.isAdmin) {
+      responseData.isDeleted = guide.isDeleted;
+      responseData.deletedAt = guide.deletedAt;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: responseData,
+    });
+  } catch (error) {
+    console.error(`[GET /api/guides/fetch] Error: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Restore a soft-deleted guide
+// @route   PATCH /api/guides/restore/:id
+// @access  Private (Admin only)
+exports.restoreGuide = async (req, res) => {
+  try {
+    const guideId = req.params.id;
+
+    // Find and update the guide
+    const restoredGuide = await Guide.findOneAndUpdate(
+      {
+        _id: guideId,
+        isDeleted: true, // Only restore if currently soft-deleted
+      },
+      {
+        isDeleted: false,
+        deletedAt: null, // Clear deletion timestamp
+      },
+      {
+        new: true, // Return the updated document
+        runValidators: true, // Run schema validators on update
+      }
+    );
+
+    // If no guide is found meeting the criteria
+    if (!restoredGuide) {
+      return res.status(404).json({
+        success: false,
+        message: "Guide not found or already active",
+        error: error.message 
+      });
+    }
+
+    // Prepare the response data (excluding sensitive fields)
+    const responseData = {
+      _id: restoredGuide._id,
+      username: restoredGuide.username,
+      guideName: restoredGuide.guideName,
+      email: restoredGuide.email,
+      role: restoredGuide.role,
+      isDeleted: restoredGuide.isDeleted,
+      createdAt: restoredGuide.createdAt,
+      updatedAt: restoredGuide.updatedAt,
+    };
+
+    // Return success response with guide data
+    res.status(200).json({
+      success: true,
+      message: "Guide successfully restored",
+      data: responseData,
+    });
+
+    // Log the restoration
+    logger.info(`Guide ${restoredGuide.email} restored by admin`);
+  } catch (error) {
+    console.error(
+      `[PATCH /api/guides/restore/${req.params.id}] Error: ${error.message}`
+    );
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
   }
 };
