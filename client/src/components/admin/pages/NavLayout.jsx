@@ -19,6 +19,7 @@ import {
   ListChecks,
   Download,
 } from "lucide-react";
+import axios from "axios";
 import {
   DropdownMenu,
   // RadixDropdownMenuTrigger,
@@ -51,20 +52,16 @@ const NavLayout = ({ children }) => {
   const fetchUnreadCount = async () => {
     try {
       const token = Cookies.get("token"); // Get auth token from cookies
-      const response = await fetch(
-        "http://localhost:5000/api/notifications/unread-count",
+      const response = await axios.get(
+        `/api/notifications/unread-count`,
         {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`, // Send auth token
-          },
+          withCredentials: true // Important for sending cookies
         }
       );
-      const data = await response.json();
-      if (data.success) {
-        setNotificationCount(data.unreadCount);
+      if (response.data.success) {
+        setNotificationCount(response.data.unreadCount);
       } else {
-        console.error("Failed to fetch unread count:", data.message);
+        console.error("Failed to fetch unread count:", response.data.message);
       }
     } catch (error) {
       console.error("Error fetching unread notification count:", error);

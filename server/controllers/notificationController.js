@@ -90,21 +90,55 @@ exports.markAsRead = async (req, res) => {
 };
 
 exports.getUnreadNotificationCount = async (req, res) => {
-    try {
+  try {
+      // 1. Validate request and user
+      if (!req.user || !req.user._id) {
+          return res.status(401).json({ 
+              success: false, 
+              message: "Authentication required" 
+          });
+      }
+
       const userId = req.user._id;
-      const userModel = req.user.constructor.modelName.toLowerCase();
-  
-      // Count unread notifications for the user
+      const userRole = req.user.role.toLowerCase(); // Assuming user has a 'role' field
+      
+      // 2. Validate user role matches expected types
+      const validRoles = ['admin', 'guide', 'student'];
+      if (!validRoles.includes(userRole)) {
+          return res.status(400).json({ 
+              success: false, 
+              message: "Invalid user role" 
+          });
+      }
+
+      // 3. Count unread notifications using proper field names
       const unreadCount = await Notification.countDocuments({
-        "recipients.id": userId,
-        "recipients.model": userModel,
-        "recipients.read": false, // Only count unread notifications
-        isDeleted: false,
+          "recipients": {
+              $elemMatch: {
+                  id: userId,
+                  model: userRole,
+                  isRead: false // Changed from 'read' to 'isRead' to match schema
+              }
+          },
+          isDeleted: false
       });
-  
-      res.status(200).json({ success: true, unreadCount });
-    } catch (error) {
-      console.error("Error fetching unread notification count:", error);
-      res.status(500).json({ success: false, message: "Internal server error" });
-    }
-  };  
+
+      res.status(200).json({ 
+          success: true, 
+          unreadCount 
+      });
+
+  } catch (error) {
+      console.error("Error fetching unread count:", {
+          error: error.message,
+          userId: req.user?._id,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+
+      res.status(500).json({ 
+          success: false, 
+          message: "Failed to get unread count",
+          error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+  }
+};  
