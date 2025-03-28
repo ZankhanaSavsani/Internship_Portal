@@ -16,7 +16,7 @@ const AddStudentPage = () => {
     semester: "",
   });
 
-  const [errors, setErrors] = useState({});
+  // const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
   const [submitMessage, setSubmitMessage] = useState("");

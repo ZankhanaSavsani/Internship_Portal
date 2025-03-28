@@ -112,9 +112,16 @@ const notificationSchema = new mongoose.Schema(
 
 // Indexes for better query performance
 notificationSchema.index({ "sender.id": 1, createdAt: -1 }); // Index for retrieving sender-based notifications
-notificationSchema.index({ "recipients.id": 1, "recipients.isRead": 1, createdAt: -1 }); // Index for fetching unread notifications efficiently
+notificationSchema.index({
+  "recipients.id": 1,
+  "recipients.isRead": 1,
+  createdAt: -1,
+}); // Index for fetching unread notifications efficiently
 notificationSchema.index({ type: 1, createdAt: -1 }); // Index for filtering notifications by type
-notificationSchema.index({ "targetFilters.year": 1, "targetFilters.semester": 1 }); // Index for filtering broadcast messages
+notificationSchema.index({
+  "targetFilters.year": 1,
+  "targetFilters.semester": 1,
+}); // Index for filtering broadcast messages
 notificationSchema.index({ isDeleted: 1 }); // Index for soft deletion
 
 // Static method to create a new notification
@@ -129,19 +136,27 @@ notificationSchema.statics.createNotification = async function ({
   priority = "medium",
   expiresAt = null,
 }) {
+  // Validate recipients exists and is an array
+  if (!recipients || !Array.isArray(recipients)) {
+    throw new Error("Recipients must be an array");
+  }
+
+  // Ensure each recipient has required fields
+  const validatedRecipients = recipients.map((recipient) => {
+    if (!recipient.id || !recipient.model) {
+      throw new Error("Each recipient must have an id and model");
+    }
+    return {
+      id: recipient.id,
+      model: recipient.model.toLowerCase(),
+      isRead: false,
+      readAt: null,
+    };
+  });
+
   const notification = new this({
     sender,
-    recipients: recipients.map((recipient) => {
-      // Handle case when recipient is already formatted with id and model
-      if (recipient.id && recipient.model) {
-        return recipient;
-      }
-      // Handle case when recipient is a Mongoose document
-      return {
-        id: recipient._id,
-        model: recipient.constructor.modelName.toLowerCase(),
-      };
-    }),
+    recipients: validatedRecipients,
     title,
     message,
     type,

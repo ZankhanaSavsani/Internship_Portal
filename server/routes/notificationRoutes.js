@@ -6,6 +6,8 @@ const {
   markAllAsRead,
   markAsRead,
   getUnreadNotificationCount,
+  sendNotificationToStudents,
+  sendNotificationToAllGuides,
 } = require("../controllers/notificationController");
 const {
   validateToken,
@@ -44,6 +46,22 @@ router.get(
   validateToken,
   checkRoleAccess(["admin", "guide", "student"]),
   getUnreadNotificationCount
+);
+
+// Route for sending notifications to specific students
+router.post(
+  "/notify-students",
+  validateToken,
+  checkRoleAccess(["admin"]),
+  sendNotificationToStudents
+);
+
+// Route for sending notifications to all guides
+router.post(
+  "/notify-guides",
+  validateToken,
+  checkRoleAccess(["admin"]),
+  sendNotificationToAllGuides
 );
 
 module.exports = router;

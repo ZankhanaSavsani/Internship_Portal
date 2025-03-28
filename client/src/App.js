@@ -37,6 +37,7 @@ import ManageInternshipStatus from "./components/admin/pages/ManageInternshipSta
 import ManageInternshipCompletionStatus from "./components/admin/pages/ManageInternshipCompletionStatus";
 import ManageWeeklyReports from "./components/admin/pages/ManageWeeklyReports";
 import AdminNotificationsPage from "./components/admin/pages/AdminNotificationsPage";
+import AnnouncementForm from "./components/admin/pages/AnnouncementForm";
 
 // Guide Components
 import GuideWeeklyReports from "./components/guide/pages/GuideWeeklyReports";
@@ -157,6 +158,10 @@ function App() {
             <Route
               path="/admin/AdminNotificationsPage"
               element={<AdminNotificationsPage />}
+            />
+            <Route
+              path="/admin/AnnouncementForm"
+              element={<AnnouncementForm />}
             />
           </Route>
         </Route>

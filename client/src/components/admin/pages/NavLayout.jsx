@@ -15,9 +15,9 @@ import {
   UserCog,
   ShieldCheck,
   UsersRound,
-  CalendarClock,
   ListChecks,
   Download,
+  Send
 } from "lucide-react";
 import axios from "axios";
 import {
@@ -51,7 +51,7 @@ const NavLayout = ({ children }) => {
   // Function to fetch unread notification count
   const fetchUnreadCount = async () => {
     try {
-      const token = Cookies.get("token"); // Get auth token from cookies
+      // const token = Cookies.get("token"); // Get auth token from cookies
       const response = await axios.get(
         `/api/notifications/unread-count`,
         {
@@ -125,6 +125,11 @@ const NavLayout = ({ children }) => {
       icon: <Download size={20} />,
       text: "Download Data",
       path: "/admin/DownloadPage",
+    },
+    {
+      icon:  <Send size={20} />,
+      text: "AnnouncementForm",
+      path: "/admin/AnnouncementForm",
     },
   ];
 

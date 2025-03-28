@@ -6,12 +6,12 @@ import {
   CheckCircle, 
   AlertCircle, 
   Clock, 
-  Trash2, 
   Filter, 
   RefreshCw,
   ExternalLink,
   ChevronDown
 } from 'lucide-react';
+import { useAuth } from '../../layouts/AuthProvider';
 
 const AdminNotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
@@ -20,20 +20,24 @@ const AdminNotificationsPage = () => {
   const [filterType, setFilterType] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const { user } = useAuth();
 
   // Fetch notifications from the backend
   const fetchNotifications = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await axios.get('/api/notifications');
+      const response = await axios.get('/api/notifications', {
+        withCredentials: true
+      });
+      
       if (response.data.success) {
         setNotifications(response.data.notifications || []);
-        setError(null);
       } else {
-        setError('Failed to load notifications. Please try again later.');
+        setError(response.data.message || 'Failed to load notifications');
       }
     } catch (err) {
-      setError('Failed to load notifications. Please try again later.');
+      setError(err.response?.data?.message || 'Failed to load notifications. Please try again later.');
       console.error('Error fetching notifications:', err);
     } finally {
       setLoading(false);
@@ -41,25 +45,57 @@ const AdminNotificationsPage = () => {
   };
 
   useEffect(() => {
-    fetchNotifications();
+    let isMounted = true;
+    const abortController = new AbortController();
+
+    const fetchData = async () => {
+      if (isMounted) {
+        await fetchNotifications();
+      }
+    };
+
+    fetchData();
     
-    // Set up polling for new notifications every 2 minutes
-    const intervalId = setInterval(fetchNotifications, 120000);
+    const intervalId = setInterval(fetchData, 120000);
     
-    return () => clearInterval(intervalId);
+    return () => {
+      isMounted = false;
+      abortController.abort();
+      clearInterval(intervalId);
+    };
   }, []);
+
+  // Check if notification is for current user
+  const isForCurrentUser = (notification) => {
+    if (!user) return false;
+    return notification.recipients.some(r => 
+      r.id === user._id && r.model === user.role.toLowerCase()
+    );
+  };
+
+  // Check if notification is unread for current user
+  const isUnreadForUser = (notification) => {
+    if (!user) return false;
+    const recipient = notification.recipients.find(r => 
+      r.id === user._id && r.model === user.role.toLowerCase()
+    );
+    return recipient && !recipient.isRead;
+  };
 
   // Mark a notification as read
   const markAsRead = async (notificationId) => {
     try {
-      await axios.put(`/api/notifications/${notificationId}/read`);
+      await axios.put(`/api/notifications/${notificationId}/mark-read`, {}, {
+        withCredentials: true
+      });
+      
       setNotifications(prevNotifications => 
         prevNotifications.map(notification => 
           notification._id === notificationId 
             ? { 
                 ...notification, 
                 recipients: notification.recipients.map(recipient => 
-                  recipient.model === 'admin' 
+                  recipient.id === user._id && recipient.model === user.role.toLowerCase()
                     ? { ...recipient, isRead: true, readAt: new Date() }
                     : recipient
                 )
@@ -69,18 +105,22 @@ const AdminNotificationsPage = () => {
       );
     } catch (err) {
       console.error('Error marking notification as read:', err);
+      setError('Failed to mark notification as read');
     }
   };
 
   // Mark all notifications as read
   const markAllAsRead = async () => {
     try {
-      await axios.put('/api/notifications/mark-all-read');
+      await axios.put('/api/notifications/mark-all-read', {}, {
+        withCredentials: true
+      });
+      
       setNotifications(prevNotifications => 
         prevNotifications.map(notification => ({
           ...notification,
           recipients: notification.recipients.map(recipient => 
-            recipient.model === 'admin' 
+            recipient.id === user._id && recipient.model === user.role.toLowerCase()
               ? { ...recipient, isRead: true, readAt: new Date() }
               : recipient
           )
@@ -88,18 +128,7 @@ const AdminNotificationsPage = () => {
       );
     } catch (err) {
       console.error('Error marking all notifications as read:', err);
-    }
-  };
-
-  // Delete a notification (soft delete)
-  const deleteNotification = async (notificationId) => {
-    try {
-      await axios.delete(`/api/notifications/${notificationId}`);
-      setNotifications(prevNotifications => 
-        prevNotifications.filter(notification => notification._id !== notificationId)
-      );
-    } catch (err) {
-      console.error('Error deleting notification:', err);
+      setError('Failed to mark all notifications as read');
     }
   };
 
@@ -114,7 +143,6 @@ const AdminNotificationsPage = () => {
     }
   };
 
-  // Get notification icon based on type and priority
   const getNotificationIcon = (type, priority) => {
     const priorityColors = {
       high: "text-red-500",
@@ -141,7 +169,6 @@ const AdminNotificationsPage = () => {
     }
   };
 
-  // Get readable notification type name
   const getNotificationTypeName = (type) => {
     switch (type) {
       case "COMPANY_APPROVAL_SUBMISSION": return "Company Approval Request";
@@ -157,12 +184,10 @@ const AdminNotificationsPage = () => {
 
   // Filter notifications
   const filteredNotifications = notifications.filter(notification => {
-    // Filter by type
     if (filterType !== 'all' && notification.type !== filterType) {
       return false;
     }
     
-    // Filter by priority
     if (priorityFilter !== 'all' && notification.priority !== priorityFilter) {
       return false;
     }
@@ -170,28 +195,12 @@ const AdminNotificationsPage = () => {
     return true;
   });
 
-  // Check if admin is a recipient and if notification is unread
-  const isUnreadForAdmin = (notification) => {
-    const adminRecipient = notification.recipients.find(r => r.model === 'admin');
-    return adminRecipient && !adminRecipient.isRead;
-  };
-
-  // Check if current admin user is in the recipients list
-  const isForCurrentAdmin = (notification) => {
-    // This would need to be adjusted to check against the logged-in admin's ID
-    // For now, we'll assume all notifications with admin recipients are valid
-    return notification.recipients.some(r => r.model === 'admin');
-  };
-
   const notificationTypes = [
     { value: 'all', label: 'All Notifications' },
     { value: 'COMPANY_APPROVAL_SUBMISSION', label: 'Company Approval Requests' },
-    // { value: 'COMPANY_APPROVAL_STATUS_CHANGE', label: 'Company Approval Updates' },
     { value: 'WEEKLY_REPORT_SUBMISSION', label: 'Weekly Report Submissions' },
-    // { value: 'WEEKLY_REPORT_STATUS_CHANGE', label: 'Weekly Report Status Updates' },
     { value: 'INTERNSHIP_COMPLETION_SUBMISSION', label: 'Internship Completions' },
-    { value: 'INTERNSHIP_STATUS_SUBMISSION', label: 'Internship Status Requestss' },
-    // { value: 'BROADCAST_MESSAGE', label: 'Broadcast Messages' },
+    { value: 'INTERNSHIP_STATUS_SUBMISSION', label: 'Internship Status Requests' },
   ];
 
   const priorityOptions = [
@@ -201,10 +210,8 @@ const AdminNotificationsPage = () => {
     { value: 'low', label: 'Low Priority' },
   ];
 
-  const unreadCount = notifications.filter(isUnreadForAdmin).length;
-
-  // Filter out notifications not meant for the current admin
-  const relevantNotifications = filteredNotifications.filter(isForCurrentAdmin);
+  const unreadCount = notifications.filter(isUnreadForUser).length;
+  const relevantNotifications = filteredNotifications.filter(isForCurrentUser);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -220,6 +227,8 @@ const AdminNotificationsPage = () => {
           <button 
             onClick={() => setShowFilters(!showFilters)}
             className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            aria-expanded={showFilters}
+            aria-label="Filter notifications"
           >
             <Filter className="h-4 w-4" />
             <span>Filter</span>
@@ -230,6 +239,7 @@ const AdminNotificationsPage = () => {
             onClick={markAllAsRead}
             className="px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 flex items-center gap-2"
             disabled={unreadCount === 0}
+            aria-label="Mark all notifications as read"
           >
             <CheckCircle className="h-4 w-4" />
             <span>Mark all read</span>
@@ -238,8 +248,10 @@ const AdminNotificationsPage = () => {
           <button 
             onClick={fetchNotifications} 
             className="p-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            aria-label="Refresh notifications"
+            disabled={loading}
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
@@ -248,8 +260,11 @@ const AdminNotificationsPage = () => {
       {showFilters && (
         <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 flex flex-wrap gap-4">
           <div className="flex-1 min-w-48">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notification Type</label>
+            <label htmlFor="notification-type-filter" className="block text-sm font-medium text-gray-700 mb-1">
+              Notification Type
+            </label>
             <select 
+              id="notification-type-filter"
               value={filterType} 
               onChange={(e) => setFilterType(e.target.value)}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -263,8 +278,11 @@ const AdminNotificationsPage = () => {
           </div>
           
           <div className="flex-1 min-w-48">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+            <label htmlFor="priority-filter" className="block text-sm font-medium text-gray-700 mb-1">
+              Priority
+            </label>
             <select 
+              id="priority-filter"
               value={priorityFilter} 
               onChange={(e) => setPriorityFilter(e.target.value)}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -288,7 +306,7 @@ const AdminNotificationsPage = () => {
 
       {/* Error state */}
       {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md mb-6">
           <div className="flex">
             <div className="flex-shrink-0">
               <AlertCircle className="h-5 w-5 text-red-500" />
@@ -313,7 +331,7 @@ const AdminNotificationsPage = () => {
       {relevantNotifications.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           {relevantNotifications.map((notification) => {
-            const isUnread = isUnreadForAdmin(notification);
+            const isUnread = isUnreadForUser(notification);
             
             return (
               <div 
@@ -341,25 +359,16 @@ const AdminNotificationsPage = () => {
                           </h3>
                         </div>
                         
-                        <div className="flex gap-2">
-                          {isUnread && (
-                            <button 
-                              onClick={() => markAsRead(notification._id)}
-                              className="text-blue-600 hover:text-blue-800 p-1"
-                              title="Mark as read"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </button>
-                          )}
-                          
+                        {isUnread && (
                           <button 
-                            onClick={() => deleteNotification(notification._id)}
-                            className="text-gray-400 hover:text-red-600 p-1"
-                            title="Delete notification"
+                            onClick={() => markAsRead(notification._id)}
+                            className="text-blue-600 hover:text-blue-800 p-1"
+                            title="Mark as read"
+                            aria-label={`Mark notification "${notification.title}" as read`}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <CheckCircle className="h-4 w-4" />
                           </button>
-                        </div>
+                        )}
                       </div>
                       
                       <p className={`mt-1 text-sm ${isUnread ? 'text-gray-700' : 'text-gray-500'}`}>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { UserPlus, UserCog, UserX } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import axios from 'axios';
+// import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const AdminManagementPages = () => {
