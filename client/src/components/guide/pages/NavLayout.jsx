@@ -43,7 +43,7 @@ const NavLayout = ({ children }) => {
     const userCookie = Cookies.get("user"); // Assuming the username is stored in a cookie named "user"
     if (userCookie) {
       const userData = JSON.parse(userCookie); // Parse the cookie data
-      setUsername(userData.adminName || "User"); // Set the username from the cookie
+      setUsername(userData.guideName || "User"); // Set the username from the cookie
     }
   }, []);
 
@@ -80,54 +80,9 @@ const NavLayout = ({ children }) => {
 
   const navItems = [
     {
-      icon: <Building2 size={20} />,
-      text: "Company Approval",
-      path: "/admin/ManageCompanyApprovals",
-    },
-    {
-      icon: <FileBarChart size={20} />,
-      text: "Status",
-      path: "/admin/ManageInternshipStatus",
-    },
-    {
-      icon: <ClipboardCheck size={20} />,
-      text: "Completion",
-      path: "/admin/ManageInternshipCompletionStatus",
-    },
-    {
       icon: <ClipboardList size={20} />,
       text: "Weekly Reports",
-      path: "/admin/ManageWeeklyReports",
-    },
-    {
-      icon: <UsersRound size={20} />,
-      text: "Manage Students",
-      path: "/admin/StudentManagementPages",
-    },
-    {
-      icon: <UserCog size={20} />,
-      text: "Manage Guides",
-      path: "/admin/GuideManagementPages",
-    },
-    {
-      icon: <ShieldCheck size={20} />,
-      text: "Manage Admins",
-      path: "/admin/AdminManagementPages",
-    },
-    {
-      icon: <UserCheck size={20} />,
-      text: "GuideAllocationForm",
-      path: "/admin/GuideAllocationForm",
-    },
-    {
-      icon: <ListChecks size={20} />,
-      text: "GuideAllocationList",
-      path: "/admin/GuideAllocationList",
-    },
-    {
-      icon: <Download size={20} />,
-      text: "Download Data",
-      path: "/admin/DownloadPage",
+      path: "/guide/ManageWeeklyReports",
     },
   ];
 
@@ -136,8 +91,8 @@ const NavLayout = ({ children }) => {
     navigate("/login"); // Redirect to login
   };
 
-  const handleStudentProfile = () => {
-    navigate("/admin/AdminProfile");
+  const handleGuideProfile = () => {
+    navigate("/guide/GuideProfile");
   };
 
   return (
@@ -158,7 +113,7 @@ const NavLayout = ({ children }) => {
           variant="ghost"
           size="icon"
           className="relative"
-          onClick={() => navigate("/admin/AdminNotificationsPage")}
+          onClick={() => navigate("/guide/GuideNotificationsPage")}
         >
           <Bell size={20} className="text-gray-600" />
           {notificationCount > 0 && (
@@ -234,7 +189,7 @@ const NavLayout = ({ children }) => {
             variant="ghost"
             size="icon"
             className="relative"
-            onClick={() => navigate("/admin/AdminNotificationsPage")}
+            onClick={() => navigate("/guide/GuideNotificationsPage")}
           >
             <Bell size={20} className="text-gray-600" />
             {notificationCount > 0 && (
@@ -258,7 +213,7 @@ const NavLayout = ({ children }) => {
           >
             <CustomDropdownMenuItem
               className="cursor-pointer hover:bg-gray-100 p-3 rounded-lg"
-              onClick={handleStudentProfile}
+              onClick={handleGuideProfile}
             >
               <User className="mr-2 h-4 w-4 text-gray-600" />
               <span>Profile</span>

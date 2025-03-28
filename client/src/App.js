@@ -42,6 +42,8 @@ import AnnouncementForm from "./components/admin/pages/AnnouncementForm";
 // Guide Components
 import GuideWeeklyReports from "./components/guide/pages/GuideWeeklyReports";
 import GuideLayout from "./components/layouts/GuideLayout";
+import GuideProfile from "./components/guide/pages/GuideProfile";
+import GuideNotificationsPage from "./components/guide/pages/GuideNotificationsPage";
 
 // Auth Components
 import LoginPage from "./components/pages/LoginPage";
@@ -169,10 +171,23 @@ function App() {
         {/* Guide routes */}
         <Route element={<ProtectedRoute allowedRoles={["guide"]} />}>
           <Route element={<GuideLayout />}>
+          <Route
+              path="/guide"
+              element={<Navigate to="/guide/GuideProfile" replace />}
+            />
             <Route
               path="/guide/ManageWeeklyReports"
               element={<GuideWeeklyReports />}
             />
+            <Route
+              path="/guide/GuideProfile"
+              element={<GuideProfile />}
+            />
+            <Route
+              path="/guide/GuideNotificationsPage"
+              element={<GuideNotificationsPage />}
+            />
+            
           </Route>
         </Route>
 

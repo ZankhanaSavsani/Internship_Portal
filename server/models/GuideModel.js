@@ -36,12 +36,12 @@ const guideSchema = new mongoose.Schema(
     },
     isDeleted: {
       type: Boolean,
-      default: false
+      default: false,
     },
     deletedAt: {
       type: Date,
-      default: null
-    }
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -50,16 +50,10 @@ const guideSchema = new mongoose.Schema(
 
 // Pre-save hook to generate password and hash it
 guideSchema.pre("save", async function (next) {
-
-  if (!this.isModified("password")) return next(); // Only hash if password is modified
-
-  // Generate a random password
-  const randomPassword = crypto.randomBytes(8).toString("hex"); 
-  this.password = randomPassword;
-
-  // Hash the password before saving
-  this.password = await bcrypt.hash(this.password, 10);
-
+  // Only generate password for new guides
+  if (this.isModified("password")) {
+    this.password = await bcrypt.hash(this.password, 10);
+  }
   next();
 });
 

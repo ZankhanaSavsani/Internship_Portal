@@ -22,24 +22,23 @@ exports.createGuide = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         message: "A guide with this username or email already exists.",
-        error: error.message,
       });
     }
 
-    // Create a new guide with a temporary password
-    const newGuide = new Guide({
+    // Generate random password before creating guide
+    const plainPassword = crypto.randomBytes(8).toString("hex");
+
+    // Create the guide with the plain password
+    const guide = new Guide({
       username,
       guideName,
       email,
+      password: plainPassword, // This will be hashed in the pre-save hook
     });
-    await newGuide.save();
 
-    const newGuideWithPassword = await Guide.findById(newGuide._id).select(
-      "+password"
-    );
-    const plainPassword = newGuideWithPassword.password; // Get the generated password
-
-    logger.info(`[POST /api/guide] Created new guide: ${newGuide.username}`);
+    // Save the guide to the database
+    await guide.save();
+    logger.info(`[POST /api/guide] Created guide: ${guide.username}`);
 
     // Prepare email content with HTML formatting
     const emailSubject = "🎉 Welcome to Guide Portal - Your Login Credentials";
@@ -264,13 +263,13 @@ exports.createGuide = async (req, res, next) => {
       <div class="welcome-emoji">
         🎉✨
       </div>
-      <h2>Hi ${newGuide.guideName}!</h2>
+      <h2>Hi ${guide.guideName}!</h2>
       <p>Your guide account has been created successfully. Below are your login credentials:</p>
       
       <div class="credentials-box">
         <div class="credential-item">
           <span class="credential-label"><span class="emoji">👤</span> Username:</span>
-          <span class="credential-value">${newGuide.username}</span>
+          <span class="credential-value">${guide.username}</span>
         </div>
         <div class="credential-item">
           <span class="credential-label"><span class="emoji">🔑</span> Password:</span>
@@ -309,16 +308,16 @@ exports.createGuide = async (req, res, next) => {
     `;
 
     // Send HTML email with credentials
-    await sendEmail(newGuide.email, emailSubject, emailContent, true);
+    await sendEmail(guide.email, emailSubject, emailContent, true);
 
     // Respond to the client
     res.status(201).json({
       success: true,
       data: {
-        id: newGuide._id,
-        username: newGuide.username,
-        guideName: newGuide.guideName,
-        email: newGuide.email,
+        id: guide._id,
+        username: guide.username,
+        guideName: guide.guideName,
+        email: guide.email,
       },
     });
   } catch (error) {
@@ -597,7 +596,7 @@ exports.fetchGuide = async (req, res) => {
         message: req.user.isAdmin
           ? "No guide found with this email (including deleted records)"
           : "Guide not found",
-        error: error.message
+        error: error.message,
       });
     }
 
@@ -660,7 +659,7 @@ exports.restoreGuide = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Guide not found or already active",
-        error: error.message 
+        error: error.message,
       });
     }
 
