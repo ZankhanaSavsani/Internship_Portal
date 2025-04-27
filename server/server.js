@@ -13,7 +13,7 @@ const app = express();
 
 // Enhanced CORS configuration
 const corsOptions = {
-  origin: 'http://localhost:3000', // Your frontend URL
+  origin: 'https://internship-portal-37n9.vercel.app', // Your frontend URL
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
