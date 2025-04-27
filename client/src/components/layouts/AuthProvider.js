@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from "react";
-import axios from "axios";
+import axios from "../api/axiosInstance"; // use custom axios instance
 import { useNavigate } from "react-router-dom";
 import Cookies from 'js-cookie';
 
@@ -17,7 +17,7 @@ export const AuthProvider = ({ children }) => {
       return null;
     }
   });
-  
+
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     try {
       const authCookie = Cookies.get('isAuthenticated');
@@ -27,15 +27,15 @@ export const AuthProvider = ({ children }) => {
       return false;
     }
   });
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Logout function - define early to use in refreshToken
+  // Logout function
   const logout = useCallback(async () => {
     try {
-      await axios.post(`${process.env.REACT_APP_BACKEND_BASE_URL}/api/auth/logout`, {}, { withCredentials: true });
+      await axios.get("/api/auth/logout"); // Changed to GET (not POST) for logout
     } catch (err) {
       console.error("Logout failed:", err);
     } finally {
@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }) => {
   const refreshToken = useCallback(async (retries = 3) => {
     const attemptRefresh = async (retriesLeft) => {
       try {
-        const response = await axios.post("/api/auth/refresh-token", {}, { withCredentials: true });
+        const response = await axios.get("/api/auth/refresh-token");
         return response.data.success;
       } catch (err) {
         console.error("Token refresh failed:", err);
@@ -63,15 +63,14 @@ export const AuthProvider = ({ children }) => {
         return false;
       }
     };
-    
+
     return attemptRefresh(retries);
   }, []);
 
-  // Function to check authentication status
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const response = await axios.get("/api/auth/me", { withCredentials: true });
+        const response = await axios.get("/api/auth/me");
         if (response.data.success) {
           setUser(response.data.user);
           setIsAuthenticated(true);
@@ -89,7 +88,6 @@ export const AuthProvider = ({ children }) => {
 
     checkAuthStatus();
 
-    // Auto-refresh token every 15 minutes
     const tokenRefreshInterval = setInterval(async () => {
       const refreshed = await refreshToken();
       if (!refreshed) logout();
@@ -98,11 +96,10 @@ export const AuthProvider = ({ children }) => {
     return () => clearInterval(tokenRefreshInterval);
   }, [logout, refreshToken]);
 
-  // Login function
   const login = async (credentials) => {
     try {
       setLoading(true);
-      const response = await axios.post("/api/auth/login", credentials, { withCredentials: true });
+      const response = await axios.post("/api/auth/login", credentials);
       if (response.data.success) {
         setUser(response.data.user);
         setIsAuthenticated(true);
@@ -122,7 +119,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Setup Axios Interceptor for Automatic Token Refresh on 401 Errors
   useEffect(() => {
     const interceptor = axios.interceptors.response.use(
       (response) => response,
