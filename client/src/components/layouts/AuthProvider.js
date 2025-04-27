@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
   // Logout function
   const logout = useCallback(async () => {
     try {
-      await axios.get("/api/auth/logout"); // Changed to GET (not POST) for logout
+      await axios.post("/api/auth/logout"); // Changed to GET (not POST) for logout
     } catch (err) {
       console.error("Logout failed:", err);
     } finally {
