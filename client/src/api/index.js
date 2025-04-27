@@ -39,7 +39,7 @@ export const getAllGuides = async () => {
 export const deleteGuideAllocation = async (data) => {
   try {
     const response = await axios.delete(
-      "http://localhost:5000/api/guide-allocation/delete-guide-allocation", 
+      `${process.env.REACT_APP_BACKEND_BASEURL}/api/guide-allocation/delete-guide-allocation`, 
       {
         data,  // This sends the data in the request body for DELETE requests
         withCredentials: true,

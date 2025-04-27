@@ -46,7 +46,7 @@ const AddGuide = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/guide",
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/guide`,
         formData,
         {
           withCredentials: true,

@@ -45,7 +45,7 @@ const AddStudentPage = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/students",
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/students`,
         formData,
         {
           withCredentials: true,

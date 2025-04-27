@@ -46,7 +46,7 @@ const AddAdmin = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/admin",
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/admin`,
         formData,
         {
           withCredentials: true,
