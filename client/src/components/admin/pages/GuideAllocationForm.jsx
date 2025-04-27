@@ -28,7 +28,7 @@ const GuideAllocationForm = () => {
       
       try {
         const response = await axios.get(
-          "http://localhost:5000/api/guide",
+          `${process.env.REACT_APP_BACKEND_BASEURL}/api/guide`,
           {
             withCredentials: true,
             headers: {
@@ -154,7 +154,7 @@ const GuideAllocationForm = () => {
     
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/guide-allocation/allocate",
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/guide-allocation/allocate`,
         {
           range,
           guideId,

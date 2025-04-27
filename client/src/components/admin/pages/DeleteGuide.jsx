@@ -6,176 +6,187 @@ import {
   CheckCircle,
   AlertCircle,
   Loader,
-  AlertTriangle
+  Search,
+  RotateCcw,
+  AlertTriangle,
+  Trash2
 } from "lucide-react";
-import { useAuth } from "../../layouts/AuthProvider"; // Adjust the import path if needed
+import { useAuth } from "../../layouts/AuthProvider";
+import { useNavigate } from 'react-router-dom';
 
 const DeleteGuidePage = () => {
   const { isAuthenticated, user } = useAuth();
-  // State for search parameters
-  const [username, setUsername] = useState('');
-  const [guideName, setGuideName] = useState('');
-  
-  // State for guide data
+  const navigate = useNavigate();
+
+  // State variables
+  const [searchTerm, setSearchTerm] = useState('');
   const [guide, setGuide] = useState(null);
-  
-  // Consolidated state for status messages
   const [loading, setLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState({ type: null, message: '' });
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
-  // Helper functions to set status messages
-  const setError = (message) => {
-    setStatusMessage({ type: 'error', message });
-  };
-
-  const setSuccess = (message) => {
-    setStatusMessage({ type: 'success', message });
-  };
-
-  const clearStatus = () => {
-    setStatusMessage({ type: null, message: '' });
-  };
-
-  // Function to search for a guide
+  // Search guide by email
   const handleSearch = async (e) => {
     e.preventDefault();
-    clearStatus();
+    resetState();
     setGuide(null);
-    setIsConfirmingDelete(false);
-    
-    if (!username && !guideName) {
-      setError('Please provide either Username or Guide Name');
-      return;
-    }
-    
+
     if (!isAuthenticated) {
       setError("You must be logged in to search for guides.");
       return;
     }
 
-    setLoading(true);
-    
+    if (user.role !== 'admin') {
+      setError("You don't have permission to search guides.");
+      return;
+    }
+
+    if (!searchTerm) {
+      setError('Please enter Guide Email');
+      return;
+    }
+
     try {
-      // Using GET method to fetch guide data
-      const response = await axios.get('/api/guide/search', {
-        params: { username, guideName },
-        withCredentials: true,
-        headers: {
-          Authorization: `Bearer ${user.token}`,
+      setLoading(true);
+      const response = await axios.get(
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/guide/fetch/by-email`,
+        {
+          params: { email: searchTerm },
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${user.token}`
+          }
         }
-      });
-      
-      if (response.data && response.data.success === true && response.data.data) {
-        setGuide(response.data.data);
-      } else if (response.data && response.data.data) {
+      );
+
+      if (response.data.success) {
         setGuide(response.data.data);
       } else {
-        throw new Error('Invalid data format returned from API');
+        throw new Error(response.data.message || 'Failed to fetch guide');
       }
-      
-      setLoading(false);
     } catch (err) {
+      handleApiError(err);
+    } finally {
       setLoading(false);
-      if (err.response && err.response.status === 404) {
-        setError('Guide not found with the provided search criteria');
-      } else if (err.response && err.response.status === 403) {
-        setError('You do not have permission to access this resource');
-      } else if (err.response && err.response.status === 400) {
-        setError(err.response.data.message || 'Invalid input data');
-      } else {
-        setError('An error occurred while fetching guide data');
-        console.error(err);
-      }
     }
   };
 
-  // Function to delete guide
+  // Soft delete guide
   const handleDelete = async () => {
-    clearStatus();
-    
-    if (!isAuthenticated) {
-      setError("You must be logged in to delete guide data.");
-      return;
-    }
-    
-    if (!guide || !guide._id) {
-      setError("No guide selected for deletion.");
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
+    if (!guide || !guide._id) return;
+    resetState();
+
     try {
-      const response = await axios.delete(`/api/guide/${guide._id}`, {
-        withCredentials: true,
-        headers: {
-          Authorization: `Bearer ${user.token}`,
+      setIsSubmitting(true);
+      const response = await axios.delete(
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/guide/${guide._id}`,
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${user.token}`
+          }
         }
-      });
-      
-      setIsSubmitting(false);
-      setIsConfirmingDelete(false);
-      
-      if (response.data && response.data.success) {
-        setSuccess(response.data.message || "Guide deleted successfully");
-        // Update the guide object to reflect deletion
+      );
+
+      if (response.data.success) {
+        setSuccessMessage('Guide deleted successfully');
         setGuide({
           ...guide,
           isDeleted: true,
           deletedAt: new Date()
         });
+        setShowDeleteConfirmation(false);
       } else {
-        throw new Error('Invalid response format');
+        throw new Error(response.data.message || 'Deletion failed');
       }
     } catch (err) {
+      handleApiError(err);
+    } finally {
       setIsSubmitting(false);
-      
-      if (err.response && err.response.status === 403) {
-        setError('You do not have permission to delete this guide');
-      } else if (err.response && err.response.status === 404) {
-        setError('Guide not found or already deleted');
-      } else {
-        setError('Failed to delete guide: ' + (err.response?.data?.message || err.message));
-      }
-      console.error(err);
     }
   };
 
-  // Function to open delete confirmation dialog
-  const openDeleteConfirmation = () => {
-    clearStatus(); // Clear any existing status messages
-    setIsConfirmingDelete(true);
+  // Restore soft-deleted guide
+  const handleRestore = async () => {
+    if (!guide || !guide._id) return;
+    resetState();
+
+    try {
+      setIsSubmitting(true);
+      const response = await axios.patch(
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/guide/restore/${guide._id}`,
+        {},
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${user.token}`
+          }
+        }
+      );
+
+      if (response.data.success) {
+        setSuccessMessage('Guide restored successfully');
+        setGuide(response.data.data);
+      } else {
+        throw new Error(response.data.message || 'Restoration failed');
+      }
+    } catch (err) {
+      handleApiError(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // Function to cancel delete operation
-  const cancelDelete = () => {
-    setIsConfirmingDelete(false);
+  // Helper functions
+  const resetState = () => {
+    setError('');
+    setSuccessMessage('');
   };
 
-  // Handle input changes
-  const handleInputChange = () => {
-    // Clear status messages whenever user changes search criteria
-    clearStatus();
+  const handleApiError = (err) => {
+    if (err.response) {
+      switch (err.response.status) {
+        case 401:
+          setError('Session expired. Please login again.');
+          navigate('/login');
+          break;
+        case 403:
+          setError('You do not have permission to perform this action.');
+          break;
+        case 404:
+          setError('Guide not found');
+          break;
+        case 400:
+          setError(err.response.data.message || 'Invalid request');
+          break;
+        default:
+          setError(err.response.data.message || 'Request failed');
+      }
+    } else if (err.request) {
+      setError('No response received from server');
+    } else {
+      setError(err.message || 'An error occurred');
+    }
   };
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-gray-100">
-        <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md text-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
           <div className="mb-6 text-blue-600">
             <UserX className="h-12 w-12 mx-auto" />
           </div>
           <h2 className="text-2xl font-bold mb-4 text-gray-800">
             Authentication Required
           </h2>
-          <p className="text-gray-600 mb-6">
-            You must be logged in to access the guide deletion system.
-          </p>
           <button
-            onClick={() => (window.location.href = "/login")}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-md font-medium transition duration-200 transform hover:scale-105"
+            onClick={() => navigate('/login')}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-md font-medium"
           >
             Go to Login
           </button>
@@ -185,186 +196,168 @@ const DeleteGuidePage = () => {
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6 flex items-center">
+    <div className="container mx-auto p-4">
+      <div className="flex items-center mb-6">
         <button
-          onClick={() => window.history.back()}
+          onClick={() => navigate(-1)}
           className="flex items-center text-gray-600 hover:text-gray-800"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
           Back
         </button>
       </div>
-      
-      <h1 className="text-2xl font-bold mb-6">Delete Guide Record</h1>
-      
+
+      <h1 className="text-2xl font-bold mb-6">Guide Management</h1>
+
       {/* Search Form */}
-      <div className="bg-gray-100 p-4 rounded-lg mb-6">
-        <h2 className="text-lg font-semibold mb-4">Find Guide</h2>
-        <form onSubmit={handleSearch} className="flex flex-wrap gap-4">
-          <div className="w-full md:w-1/3">
-            <label className="block mb-1">Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => {
-                setUsername(e.target.value);
-                handleInputChange();
-              }}
-              className="w-full p-2 border rounded"
-              placeholder="Enter username"
-            />
-          </div>
-          <div className="w-full md:w-1/3">
-            <label className="block mb-1">Guide Name</label>
-            <input
-              type="text"
-              value={guideName}
-              onChange={(e) => {
-                setGuideName(e.target.value);
-                handleInputChange();
-              }}
-              className="w-full p-2 border rounded"
-              placeholder="Enter guide name"
-            />
-          </div>
-          <div className="w-full md:w-1/3 flex items-end">
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              disabled={loading}
-            >
-              {loading ? 'Searching...' : 'Search'}
-            </button>
-          </div>
+      <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+        <form onSubmit={handleSearch} className="flex gap-4">
+          <input
+            type="email"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Enter Guide Email"
+            className="flex-1 px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            required
+          />
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
+            disabled={loading}
+          >
+            {loading ? <Loader className="animate-spin" size={18} /> : <Search size={18} />}
+            Search
+          </button>
         </form>
       </div>
-      
-      {/* Consolidated Status Message */}
-      {statusMessage.type === 'error' && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 transform animate-fade-in-down">
-          <div className="flex items-center space-x-3">
-            <AlertCircle className="w-5 h-5 text-red-500" />
-            <p>{statusMessage.message}</p>
+
+      {/* Status Messages */}
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500">
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-red-500 mr-3" />
+            <p className="text-red-700">{error}</p>
           </div>
         </div>
       )}
-      
-      {statusMessage.type === 'success' && (
-        <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 transform animate-fade-in-down">
-          <div className="flex items-center space-x-3">
-            <CheckCircle className="w-5 h-5 text-green-500" />
-            <p>{statusMessage.message}</p>
+
+      {successMessage && (
+        <div className="mb-4 p-4 bg-green-50 border-l-4 border-green-500">
+          <div className="flex items-center">
+            <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+            <p className="text-green-700">{successMessage}</p>
           </div>
         </div>
       )}
-      
+
       {/* Loading Overlay */}
       {isSubmitting && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-white p-6 rounded-lg shadow-lg flex items-center space-x-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg flex items-center gap-4">
             <Loader className="h-6 w-6 text-blue-600 animate-spin" />
-            <p className="text-lg font-medium text-gray-800">
-              Processing deletion...
-            </p>
+            <p className="text-lg font-medium">Processing...</p>
           </div>
         </div>
       )}
-      
-      <div className="max-w-3xl mx-auto">
-        {/* Guide Details and Delete Button */}
-        {guide && (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="flex justify-between mb-4">
-              <h2 className="text-xl font-bold">Guide Details</h2>
-              {!guide.isDeleted && !isConfirmingDelete && (
+
+      {/* Guide Details */}
+      {guide && (
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Guide Details</h2>
+            <div className="flex gap-2">
+              {!guide.isDeleted && (
                 <button
-                  onClick={openDeleteConfirmation}
-                  className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                  disabled={isSubmitting}
+                  onClick={() => setShowDeleteConfirmation(true)}
+                  className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded"
+                  title="Delete"
                 >
-                  Delete Guide
+                  <Trash2 size={18} />
+                </button>
+              )}
+              {guide.isDeleted && (
+                <button
+                  onClick={handleRestore}
+                  className="p-2 text-green-600 hover:text-green-900 hover:bg-green-50 rounded"
+                  title="Restore"
+                >
+                  <RotateCcw size={18} />
                 </button>
               )}
             </div>
-            
-            {/* Delete Confirmation */}
-            {isConfirmingDelete && (
-              <div className="mb-6 p-4 border border-red-300 bg-red-50 rounded-lg">
-                <div className="flex items-center gap-3 mb-3">
-                  <AlertTriangle className="w-6 h-6 text-red-500" />
-                  <h3 className="text-lg font-semibold text-red-700">Confirm Deletion</h3>
-                </div>
-                <p className="mb-4 text-gray-700">
-                  Are you sure you want to delete the guide record for <span className="font-semibold">{guide.guideName}</span> (Username: {guide.username})? This action will delete the guide and cannot be undone easily.
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleDelete}
-                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? "Processing..." : "Confirm Delete"}
-                  </button>
-                  <button
-                    onClick={cancelDelete}
-                    className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-            
-            {/* Guide Info Display */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          </div>
+
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-gray-600">Username</p>
-                <p className="font-medium">{guide.username || 'Not provided'}</p>
+                <p className="text-sm font-medium text-gray-500">Username</p>
+                <p className="mt-1 text-sm text-gray-900">{guide.username}</p>
               </div>
               <div>
-                <p className="text-gray-600">Guide Name</p>
-                <p className="font-medium">{guide.guideName || 'Not provided'}</p>
+                <p className="text-sm font-medium text-gray-500">Guide Name</p>
+                <p className="mt-1 text-sm text-gray-900">{guide.guideName}</p>
               </div>
               <div>
-                <p className="text-gray-600">Email</p>
-                <p className="font-medium">{guide.email || 'Not provided'}</p>
+                <p className="text-sm font-medium text-gray-500">Email</p>
+                <p className="mt-1 text-sm text-gray-900">{guide.email}</p>
               </div>
               <div>
-                <p className="text-gray-600">Phone</p>
-                <p className="font-medium">{guide.phone || 'Not provided'}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Status</p>
-                <p className={`font-medium ${guide.isDeleted ? 'text-red-600' : 'text-green-600'}`}>
-                  {guide.isDeleted ? 'Deleted' : 'Active'}
+                <p className="text-sm font-medium text-gray-500">Status</p>
+                <p className="mt-1">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    guide.isDeleted ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                  }`}>
+                    {guide.isDeleted ? 'Deleted' : 'Active'}
+                  </span>
                 </p>
               </div>
-              {guide.isDeleted && guide.deletedAt && (
+              <div>
+                <p className="text-sm font-medium text-gray-500">Created At</p>
+                <p className="mt-1 text-sm text-gray-900">
+                  {new Date(guide.createdAt).toLocaleString()}
+                </p>
+              </div>
+              {guide.isDeleted && (
                 <div>
-                  <p className="text-gray-600">Deleted At</p>
-                  <p className="font-medium text-red-600">
+                  <p className="text-sm font-medium text-gray-500">Deleted At</p>
+                  <p className="mt-1 text-sm text-gray-900">
                     {new Date(guide.deletedAt).toLocaleString()}
                   </p>
                 </div>
               )}
-              <div>
-                <p className="text-gray-600">Created At</p>
-                <p className="font-medium">
-                  {guide.createdAt ? new Date(guide.createdAt).toLocaleString() : 'Not available'}
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-600">Updated At</p>
-                <p className="font-medium">
-                  {guide.updatedAt ? new Date(guide.updatedAt).toLocaleString() : 'Not available'}
-                </p>
-              </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertTriangle className="h-6 w-6 text-red-500" />
+              <h2 className="text-xl font-semibold">Confirm Deletion</h2>
+            </div>
+            <p className="mb-6 text-gray-700">
+              Are you sure you want to delete the guide <span className="font-semibold">{guide?.guideName}</span> (Username: {guide?.username})? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirmation(false)}
+                className="px-4 py-2 border rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 rounded-md text-white bg-red-600 hover:bg-red-700"
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

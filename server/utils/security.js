@@ -19,4 +19,3 @@ const redactSensitiveData = (data, keysToRedact = []) => {
   };
   
   module.exports = { redactSensitiveData };
-  

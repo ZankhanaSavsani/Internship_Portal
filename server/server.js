@@ -10,20 +10,34 @@ dotenv.config();
 connectDB();
 
 const app = express();
+
+// Enhanced CORS configuration
+const corsOptions = {
+  origin: 'http://localhost:3000', // Your frontend URL
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
+// Apply CORS middleware
+app.use(cors(corsOptions));
+
+// Explicit OPTIONS handler for all routes
+app.options('*', cors(corsOptions)); // Important for preflight
+
 app.use(express.json());
 
 // Error handler 
 app.use(errorHandler);
 
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 app.set('trust proxy', true);
 
-// Enable CORS for all routes
-app.use(cors({
-  origin: 'http://localhost:3000',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true, //  Allow credentials (cookies)
-}));
+
 app.use(cookieParser()); //  Parse cookies
 
 // Import Routes

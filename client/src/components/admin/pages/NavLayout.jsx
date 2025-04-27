@@ -53,7 +53,7 @@ const NavLayout = ({ children }) => {
     try {
       // const token = Cookies.get("token"); // Get auth token from cookies
       const response = await axios.get(
-        `/api/notifications/unread-count`,
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/notifications/unread-count`,
         {
           withCredentials: true // Important for sending cookies
         }

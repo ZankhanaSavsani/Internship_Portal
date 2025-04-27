@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { format, isToday, isYesterday } from 'date-fns';
-import { 
-  Bell, 
-  CheckCircle, 
-  AlertCircle, 
-  Clock, 
-  Filter, 
+import {
+  Bell,
+  CheckCircle,
+  AlertCircle,
+  Filter,
   RefreshCw,
   ExternalLink,
   ChevronDown,
-  BookOpen,
   FileText,
-  UserCheck
+  ClipboardList,
+  UserCheck,
+  Bookmark,
+  ThumbsUp,
+  ThumbsDown
 } from 'lucide-react';
 import { useAuth } from '../../layouts/AuthProvider';
 
@@ -25,29 +27,31 @@ const GuideNotificationsPage = () => {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const { user } = useAuth();
 
-  // Fetch notifications from the backend
   const fetchNotifications = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get('/api/notifications/guide', { // Changed endpoint
+      const response = await axios.get(`${process.env.REACT_APP_BACKEND_BASEURL}/api/notifications`, {
         withCredentials: true
       });
-      
+
       if (response.data.success) {
         setNotifications(response.data.notifications || []);
       } else {
         setError(response.data.message || 'Failed to load notifications');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load notifications. Please try again later.');
-      console.error('Error fetching notifications:', err);
+      const errorMsg = err.response?.data?.message || 'Failed to load notifications. Please try again later.';
+      setError(errorMsg);
+      console.error('Error fetching guide notifications:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (!user) return;
+
     let isMounted = true;
     const abortController = new AbortController();
 
@@ -58,50 +62,50 @@ const GuideNotificationsPage = () => {
     };
 
     fetchData();
-    
+
     const intervalId = setInterval(fetchData, 120000);
-    
+
     return () => {
       isMounted = false;
       abortController.abort();
       clearInterval(intervalId);
     };
-  }, []);
+  }, [user]);
 
-  // Check if notification is for current guide
   const isForCurrentGuide = (notification) => {
     if (!user) return false;
     return notification.recipients.some(r => 
-      r.id === user._id && r.model === 'guide'
+      r.id === user._id && r.model === 'Guide'
     );
   };
 
-  // Check if notification is unread for current guide
   const isUnreadForGuide = (notification) => {
     if (!user) return false;
     const recipient = notification.recipients.find(r => 
-      r.id === user._id && r.model === 'guide'
+      r.id === user._id && r.model === 'Guide'
     );
     return recipient && !recipient.isRead;
   };
 
-  // Mark a notification as read
   const markAsRead = async (notificationId) => {
     try {
-      await axios.put(`/api/notifications/${notificationId}/mark-read`, {}, {
-        withCredentials: true
-      });
-      
-      setNotifications(prevNotifications => 
-        prevNotifications.map(notification => 
-          notification._id === notificationId 
-            ? { 
-                ...notification, 
-                recipients: notification.recipients.map(recipient => 
-                  recipient.id === user._id && recipient.model === 'guide'
-                    ? { ...recipient, isRead: true, readAt: new Date() }
-                    : recipient
-                )
+      await axios.put(
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/notifications/${notificationId}/mark-read/guide`,
+        {},
+        { withCredentials: true }
+      );
+
+      setNotifications(prevNotifications =>
+        prevNotifications.map(notification =>
+          notification._id === notificationId
+            ? {
+                ...notification,
+                recipients: notification.recipients.map(recipient => {
+                  if (recipient.id === user._id && recipient.model === 'Guide') {
+                    return { ...recipient, isRead: true, readAt: new Date() };
+                  }
+                  return recipient;
+                })
               }
             : notification
         )
@@ -112,21 +116,23 @@ const GuideNotificationsPage = () => {
     }
   };
 
-  // Mark all notifications as read
   const markAllAsRead = async () => {
     try {
-      await axios.put('/api/notifications/mark-all-read/guide', {}, { // Changed endpoint
-        withCredentials: true
-      });
-      
-      setNotifications(prevNotifications => 
+      await axios.put(
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/notifications/mark-all-read/guide`,
+        {},
+        { withCredentials: true }
+      );
+
+      setNotifications(prevNotifications =>
         prevNotifications.map(notification => ({
           ...notification,
-          recipients: notification.recipients.map(recipient => 
-            recipient.id === user._id && recipient.model === 'guide'
-              ? { ...recipient, isRead: true, readAt: new Date() }
-              : recipient
-          )
+          recipients: notification.recipients.map(recipient => {
+            if (recipient.id === user._id && recipient.model === 'Guide') {
+              return { ...recipient, isRead: true, readAt: new Date() };
+            }
+            return recipient;
+          })
         }))
       );
     } catch (err) {
@@ -135,7 +141,6 @@ const GuideNotificationsPage = () => {
     }
   };
 
-  // Format the notification timestamp
   const formatTimestamp = (timestamp) => {
     if (isToday(new Date(timestamp))) {
       return `Today at ${format(new Date(timestamp), 'h:mm a')}`;
@@ -146,24 +151,26 @@ const GuideNotificationsPage = () => {
     }
   };
 
-  const getNotificationIcon = (type, priority) => {
+  const getNotificationIcon = (type, priority, notification) => {
     const priorityColors = {
       high: "text-red-500",
       medium: "text-amber-500",
       low: "text-blue-500"
     };
-    
+
     const color = priorityColors[priority] || "text-gray-500";
-    
+
     switch (type) {
       case "WEEKLY_REPORT_SUBMISSION":
-      case "WEEKLY_REPORT_STATUS_CHANGE":
         return <FileText className={`${color} h-5 w-5`} />;
-      case "INTERNSHIP_COMPLETION_SUBMISSION":
-      case "INTERNSHIP_STATUS_SUBMISSION":
-        return <BookOpen className={`${color} h-5 w-5`} />;
+      case "WEEKLY_REPORT_STATUS_CHANGE":
+        return notification?.statusChange?.to === "Approved" 
+          ? <ThumbsUp className={`${color} h-5 w-5`} />
+          : <ThumbsDown className={`${color} h-5 w-5`} />;
       case "STUDENT_ASSIGNMENT":
         return <UserCheck className={`${color} h-5 w-5`} />;
+      case "GUIDE_SPECIFIC_ANNOUNCEMENT":
+        return <Bookmark className={`${color} h-5 w-5`} />;
       case "BROADCAST_MESSAGE":
         return <Bell className={`${color} h-5 w-5`} />;
       default:
@@ -171,37 +178,108 @@ const GuideNotificationsPage = () => {
     }
   };
 
-  const getNotificationTypeName = (type) => {
+  const getNotificationTypeName = (type, notification) => {
     switch (type) {
-      case "WEEKLY_REPORT_SUBMISSION": return "Weekly Report Submitted";
-      case "WEEKLY_REPORT_STATUS_CHANGE": return "Weekly Report Status";
-      case "INTERNSHIP_COMPLETION_SUBMISSION": return "Internship Completion";
-      case "INTERNSHIP_STATUS_SUBMISSION": return "Internship Status";
-      case "STUDENT_ASSIGNMENT": return "New Student Assigned";
-      case "BROADCAST_MESSAGE": return "Broadcast Message";
-      default: return type.replace(/_/g, ' ').toLowerCase();
+      case "WEEKLY_REPORT_SUBMISSION":
+        return "Weekly Report Submitted";
+      case "WEEKLY_REPORT_STATUS_CHANGE":
+        return notification?.statusChange?.to === "Approved" 
+          ? "Weekly Report Approved" 
+          : "Weekly Report Rejected";
+      case "STUDENT_ASSIGNMENT":
+        return "New Student Assignment";
+      case "GUIDE_SPECIFIC_ANNOUNCEMENT":
+        return "Guide Announcement";
+      case "BROADCAST_MESSAGE":
+        return "Broadcast Message";
+      default:
+        return type.replace(/_/g, ' ').toLowerCase();
     }
   };
 
-  // Filter notifications
-  const filteredNotifications = notifications.filter(notification => {
+  const renderNotificationContent = (notification) => {
+    const isUnread = isUnreadForGuide(notification);
+    
+    switch (notification.type) {
+      case "WEEKLY_REPORT_STATUS_CHANGE":
+        return (
+          <>
+            <p className={`mt-1 text-sm ${isUnread ? 'text-gray-700' : 'text-gray-500'}`}>
+              {notification.message}
+              {notification.statusChange?.reason && (
+                <div className="mt-2 p-2 bg-gray-100 rounded">
+                  <p className="text-sm font-medium">Feedback:</p>
+                  <p className="text-sm">{notification.statusChange.reason}</p>
+                </div>
+              )}
+            </p>
+            {notification.link && (
+              <a
+                href={notification.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center mt-2 text-sm text-blue-600 hover:text-blue-800"
+              >
+                View details <ExternalLink className="ml-1 h-3 w-3" />
+              </a>
+            )}
+          </>
+        );
+
+      case "STUDENT_ASSIGNMENT":
+        return (
+          <>
+            <p className={`mt-1 text-sm ${isUnread ? 'text-gray-700' : 'text-gray-500'}`}>
+              {notification.message}
+            </p>
+            {notification.studentData && (
+              <div className="mt-2 p-2 bg-gray-100 rounded">
+                <p className="text-sm font-medium">Student: {notification.studentData.name}</p>
+                {notification.studentData.year && (
+                  <p className="text-sm">Year: {notification.studentData.year}</p>
+                )}
+              </div>
+            )}
+            {notification.link && (
+              <a
+                href={notification.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center mt-2 text-sm text-blue-600 hover:text-blue-800"
+              >
+                View student details <ExternalLink className="ml-1 h-3 w-3" />
+              </a>
+            )}
+          </>
+        );
+
+      default:
+        return (
+          <p className={`mt-1 text-sm ${isUnread ? 'text-gray-700' : 'text-gray-500'}`}>
+            {notification.message}
+          </p>
+        );
+    }
+  };
+
+  const relevantNotifications = notifications.filter(isForCurrentGuide);
+  const filteredNotifications = relevantNotifications.filter(notification => {
     if (filterType !== 'all' && notification.type !== filterType) {
       return false;
     }
-    
     if (priorityFilter !== 'all' && notification.priority !== priorityFilter) {
       return false;
     }
-    
     return true;
   });
 
   const notificationTypes = [
     { value: 'all', label: 'All Notifications' },
-    { value: 'WEEKLY_REPORT_SUBMISSION', label: 'Weekly Reports' },
-    { value: 'INTERNSHIP_COMPLETION_SUBMISSION', label: 'Internship Completions' },
-    { value: 'INTERNSHIP_STATUS_SUBMISSION', label: 'Internship Status' },
+    { value: 'WEEKLY_REPORT_SUBMISSION', label: 'Report Submissions' },
+    { value: 'WEEKLY_REPORT_STATUS_CHANGE', label: 'Report Feedback' },
     { value: 'STUDENT_ASSIGNMENT', label: 'Student Assignments' },
+    { value: 'GUIDE_SPECIFIC_ANNOUNCEMENT', label: 'Announcements' },
+    { value: 'BROADCAST_MESSAGE', label: 'Broadcast Messages' },
   ];
 
   const priorityOptions = [
@@ -212,20 +290,24 @@ const GuideNotificationsPage = () => {
   ];
 
   const unreadCount = notifications.filter(isUnreadForGuide).length;
-  const relevantNotifications = filteredNotifications.filter(isForCurrentGuide);
+
+  const handleRetry = () => {
+    setError(null);
+    fetchNotifications();
+  };
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Guide Notifications</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Notifications</h1>
           <p className="text-gray-500 mt-1">
             You have {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
           </p>
         </div>
-        
+
         <div className="flex gap-3">
-          <button 
+          <button
             onClick={() => setShowFilters(!showFilters)}
             className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
             aria-expanded={showFilters}
@@ -235,8 +317,8 @@ const GuideNotificationsPage = () => {
             <span>Filter</span>
             <ChevronDown className="h-4 w-4" />
           </button>
-          
-          <button 
+
+          <button
             onClick={markAllAsRead}
             className="px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 flex items-center gap-2"
             disabled={unreadCount === 0}
@@ -245,9 +327,9 @@ const GuideNotificationsPage = () => {
             <CheckCircle className="h-4 w-4" />
             <span>Mark all read</span>
           </button>
-          
-          <button 
-            onClick={fetchNotifications} 
+
+          <button
+            onClick={fetchNotifications}
             className="p-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
             aria-label="Refresh notifications"
             disabled={loading}
@@ -257,16 +339,15 @@ const GuideNotificationsPage = () => {
         </div>
       </div>
 
-      {/* Filter panel */}
       {showFilters && (
         <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 flex flex-wrap gap-4">
           <div className="flex-1 min-w-48">
             <label htmlFor="notification-type-filter" className="block text-sm font-medium text-gray-700 mb-1">
               Notification Type
             </label>
-            <select 
+            <select
               id="notification-type-filter"
-              value={filterType} 
+              value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -277,14 +358,14 @@ const GuideNotificationsPage = () => {
               ))}
             </select>
           </div>
-          
+
           <div className="flex-1 min-w-48">
             <label htmlFor="priority-filter" className="block text-sm font-medium text-gray-700 mb-1">
               Priority
             </label>
-            <select 
+            <select
               id="priority-filter"
-              value={priorityFilter} 
+              value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -298,44 +379,43 @@ const GuideNotificationsPage = () => {
         </div>
       )}
 
-      {/* Loading state */}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+          <strong>Error: </strong> {error}
+          <button 
+            onClick={handleRetry}
+            className="ml-2 px-2 py-1 text-sm font-medium text-red-700 border border-red-500 rounded-md hover:bg-red-100"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {loading && notifications.length === 0 && (
         <div className="flex justify-center items-center py-12 bg-white rounded-lg border border-gray-200">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-800"></div>
         </div>
       )}
 
-      {/* Error state */}
-      {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md mb-6">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <AlertCircle className="h-5 w-5 text-red-500" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          </div>
+      {filteredNotifications.length === 0 && !loading && (
+        <div className="bg-white rounded-lg border border-gray-200 p-6 text-center">
+          <Bell className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No notifications</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            {filterType !== 'all' || priorityFilter !== 'all' 
+              ? "No notifications match your current filters" 
+              : "You don't have any notifications yet"}
+          </p>
         </div>
       )}
 
-      {/* Empty state */}
-      {!loading && relevantNotifications.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-12 bg-white rounded-lg border border-gray-200">
-          <Bell className="h-12 w-12 text-gray-300 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900">No notifications</h3>
-          <p className="text-gray-500 mt-2">You don't have any notifications yet</p>
-        </div>
-      )}
-
-      {/* Notifications list */}
-      {relevantNotifications.length > 0 && (
+      {filteredNotifications.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          {relevantNotifications.map((notification) => {
+          {filteredNotifications.map((notification) => {
             const isUnread = isUnreadForGuide(notification);
-            
+
             return (
-              <div 
+              <div
                 key={notification._id}
                 className={`
                   border-b border-gray-200 last:border-0
@@ -346,22 +426,22 @@ const GuideNotificationsPage = () => {
                 <div className="p-4">
                   <div className="flex items-start">
                     <div className="flex-shrink-0 pt-0.5">
-                      {getNotificationIcon(notification.type, notification.priority)}
+                      {getNotificationIcon(notification.type, notification.priority, notification)}
                     </div>
-                    
+
                     <div className="ml-3 flex-1">
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="text-sm text-gray-500">
-                            {getNotificationTypeName(notification.type)}
+                            {getNotificationTypeName(notification.type, notification)}
                           </p>
                           <h3 className={`font-medium ${isUnread ? 'text-gray-900' : 'text-gray-600'}`}>
                             {notification.title}
                           </h3>
                         </div>
-                        
+
                         {isUnread && (
-                          <button 
+                          <button
                             onClick={() => markAsRead(notification._id)}
                             className="text-blue-600 hover:text-blue-800 p-1"
                             title="Mark as read"
@@ -371,41 +451,20 @@ const GuideNotificationsPage = () => {
                           </button>
                         )}
                       </div>
-                      
-                      <p className={`mt-1 text-sm ${isUnread ? 'text-gray-700' : 'text-gray-500'}`}>
-                        {notification.message}
-                      </p>
-                      
-                      {notification.link && (
-                        <a 
-                          href={notification.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center mt-2 text-sm text-blue-600 hover:text-blue-800"
-                        >
-                          View details <ExternalLink className="ml-1 h-3 w-3" />
-                        </a>
-                      )}
-                      
-                      {notification.targetFilters && (notification.targetFilters.year || notification.targetFilters.semester) && (
-                        <div className="mt-2 text-xs text-gray-500">
-                          Target: 
-                          {notification.targetFilters.year && ` Year ${notification.targetFilters.year}`}
-                          {notification.targetFilters.semester && ` Semester ${notification.targetFilters.semester}`}
-                        </div>
-                      )}
-                      
+
+                      {renderNotificationContent(notification)}
+
                       <div className="mt-2 flex items-center text-xs text-gray-500">
                         <p>
-                          From: {notification.sender.name || `${notification.sender.model.charAt(0).toUpperCase() + notification.sender.model.slice(1)}`}
+                          From: {notification.sender?.name || `${notification.sender?.model?.charAt(0).toUpperCase() + notification.sender?.model?.slice(1)}`}
                         </p>
                         <span className="mx-2">•</span>
                         <p>{formatTimestamp(notification.createdAt)}</p>
-                        
+
                         {notification.priority !== 'medium' && (
                           <>
                             <span className="mx-2">•</span>
-                            <span 
+                            <span
                               className={`
                                 ${notification.priority === 'high' ? 'text-red-600 bg-red-100' : 'text-blue-600 bg-blue-100'}
                                 px-1.5 py-0.5 rounded-full text-xs

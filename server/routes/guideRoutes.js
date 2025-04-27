@@ -6,7 +6,9 @@ const {
   updateGuide,
   deleteGuide,
   getGuideById,
-  getAllGuides
+  getAllGuides,
+  fetchGuideByEmail,
+  restoreGuide,
 } = require("../controllers/guideController");
 const {validateToken, checkRoleAccess } = require("../middleware/authMiddleware");
 const validateGuideInput = require("../middleware/validateGuideInput");
@@ -25,5 +27,18 @@ router.get("/:id", validateToken, checkRoleAccess(["guide", "admin"]), getGuideB
 
 // Get all guides (excluding soft-deleted records)
 router.get("/", validateToken, checkRoleAccess(["admin"]), getAllGuides);
+
+// Add this near your other routes
+router.get("/fetch/by-email", validateToken, checkRoleAccess(["admin"]), fetchGuideByEmail);
+
+// Add this before your PATCH route
+router.options('/restore/:id', (req, res) => {
+  res.setHeader('Access-Control-Allow-Methods', 'PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.status(200).end();
+});
+
+// Your existing route
+router.patch("/restore/:id", validateToken, checkRoleAccess(["admin"]), restoreGuide);
 
 module.exports = router;

@@ -13,6 +13,7 @@
     "clsx": "^2.1.1",
     "cra-template": "1.2.0",
     "date-fns": "^4.1.0",
+    "framer-motion": "^12.9.2",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.473.0",
     "react": "^19.0.0",

@@ -35,7 +35,7 @@ const GuideProfile = () => {
   useEffect(() => {
     const fetchGuideProfile = async () => {
       try {
-        const response = await axios.get(`/api/guide/${user._id}`, {
+        const response = await axios.get(`${process.env.REACT_APP_BACKEND_BASEURL}/api/guide/${user._id}`, {
           withCredentials: true,
         });
         setGuideData(response.data.data);

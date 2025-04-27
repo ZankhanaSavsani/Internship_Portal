@@ -974,9 +974,9 @@ const ManageCompanyApprovals = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <Card className="w-full max-w-6xl mx-auto">
-        <CardHeader>
+    <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-b from-blue-50 to-gray-100 p-4 sm:p-8">
+    <Card className="w-full max-w-3xl mx-auto">
+        <CardHeader className="pb-6">
           <CardTitle className="text-center text-xl text-gray-700">
             Company Approvals Management
           </CardTitle>
@@ -1014,42 +1014,62 @@ const ManageCompanyApprovals = () => {
           )}
 
           {/* Filter Controls */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
-                <Input
-                  placeholder="Search by company name..."
-                  value={companySearch}
-                  onChange={(e) => setCompanySearch(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
-            </div>
-            <div className="flex-1">
-              <Input
-                placeholder="Search by student name..."
-                value={studentSearch}
-                onChange={(e) => setStudentSearch(e.target.value)}
-              />
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2 md:mt-0">
-              {["", "Pending", "Approved", "Rejected"].map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setStatusFilter(status)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    statusFilter === status
-                      ? "bg-blue-700 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  {status || "All Status"}
-                </button>
-              ))}
-            </div>
-          </div>
+          <div className="space-y-6 mb-8">
+  {/* Search Inputs - Now with proper spacing */}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="relative">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+      <Input
+        placeholder="Search by company name..."
+        value={companySearch}
+        onChange={(e) => setCompanySearch(e.target.value)}
+        className="pl-10"
+      />
+    </div>
+    <div className="relative">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+      <Input
+        placeholder="Search by student name..."
+        value={studentSearch}
+        onChange={(e) => setStudentSearch(e.target.value)}
+        className="pl-10"
+      />
+    </div>
+  </div>
 
+  {/* Status Filters - Now with more spacing above */}
+  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pt-2">
+    <div className="flex flex-wrap gap-2">
+      {["", "Pending", "Approved", "Rejected"].map((status) => (
+        <button
+          key={status}
+          onClick={() => setStatusFilter(status)}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            statusFilter === status
+              ? "bg-blue-700 text-white shadow-sm"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+        >
+          {status || "All Status"}
+        </button>
+      ))}
+    </div>
+
+    {/* <div className="flex items-center space-x-2">
+      <label className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          checked={showDeleted}
+          onChange={() => setShowDeleted((prev) => !prev)}
+          className="form-checkbox h-4 w-4 text-indigo-600 transition duration-150 ease-in-out"
+        />
+        <span className="text-sm text-gray-700">
+          Show Deleted Records
+        </span>
+      </label>
+    </div> */}
+  </div>
+</div>
           {/* Toggle to show/hide deleted records */}
           <div className="flex items-center mb-4">
             <label className="flex items-center space-x-2">

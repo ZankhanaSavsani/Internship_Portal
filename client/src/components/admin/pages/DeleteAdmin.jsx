@@ -1,393 +1,219 @@
-import React, { useState, useEffect } from "react";
-import {
-  UserX,
-  ArrowLeft,
-  CheckCircle,
-  AlertCircle,
-  Loader,
-  AlertTriangle
-} from "lucide-react";
-import { useAuth } from "../../layouts/AuthProvider";
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { toast } from 'react-toastify';
+import { Trash2, RefreshCcw, AlertTriangle, CheckCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const DeleteAdmin = () => {
-  const { isAuthenticated, user } = useAuth();
-  
-  // State for search parameters
-  const [searchQuery, setSearchQuery] = useState("");
-  
-  // State for admin data
-  const [admins, setAdmins] = useState([]);
-  const [selectedAdmin, setSelectedAdmin] = useState(null);
-  
-  // UI state
-  const [loading, setLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState({ type: null, message: '' });
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [adminId, setAdminId] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('delete');
+  const navigate = useNavigate();
 
-  // Helper functions to set status messages
-  const setError = (message) => {
-    setStatusMessage({ type: 'error', message });
-  };
-
-  const setSuccess = (message) => {
-    setStatusMessage({ type: 'success', message });
-  };
-
-  const clearStatus = () => {
-    setStatusMessage({ type: null, message: '' });
-  };
-
-  // Fetch all admins when the component mounts
-  useEffect(() => {
-    if (!isAuthenticated) return;
+  const handleAdminAction = async (e, action) => {
+    e.preventDefault();
     
-    const fetchAdmins = async () => {
-      setLoading(true);
-      clearStatus();
-      
-      try {
-        const response = await fetch("/api/admin", {
-          headers: {
-            Authorization: `Bearer ${user.token}`,
-          },
-        });
-        const data = await response.json();
-        
-        if (response.ok) {
-          setAdmins(data.data);
-        } else {
-          setError("Error fetching admins: " + (data.message || "Please try again."));
-        }
-      } catch (error) {
-        console.error("Error fetching admins:", error);
-        setError("Error fetching admins. Please check your connection and try again.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchAdmins();
-  }, [isAuthenticated, user]);
-
-  // Handle search input change
-  const handleSearch = (e) => {
-    setSearchQuery(e.target.value);
-    clearStatus();
-  };
-
-  // Filter admins based on search query
-  const filteredAdmins = admins.filter(
-    (admin) =>
-      admin.adminName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      admin.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (admin.email && admin.email.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  // Function to open delete confirmation
-  const openDeleteConfirmation = (admin) => {
-    setSelectedAdmin(admin);
-    setIsConfirmingDelete(true);
-    clearStatus();
-  };
-
-  // Function to cancel delete operation
-  const cancelDelete = () => {
-    setIsConfirmingDelete(false);
-  };
-
-  // Function to handle deletion
-  const handleDelete = async () => {
-    if (!selectedAdmin || !selectedAdmin._id) {
-      setError("No admin selected for deletion.");
+    // Basic validation
+    if (!adminId) {
+      toast.error('Please enter an admin ID');
       return;
     }
 
-    setIsSubmitting(true);
-    clearStatus();
+    // Confirm action
+    const confirmMessage = action === 'delete'
+      ? 'Are you sure you want to soft delete this admin? This action can be reversed later.'
+      : 'Are you sure you want to restore this admin account?';
     
+    const confirmAction = window.confirm(confirmMessage);
+    if (!confirmAction) return;
+
     try {
-      const response = await fetch(
-        `/api/admin/${selectedAdmin._id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${user.token}`,
-          },
+      setIsLoading(true);
+      
+      // Get the auth token from local storage
+      const token = localStorage.getItem('token');
+      
+      // Determine API endpoint and method based on action
+      const apiConfig = action === 'delete'
+        ? {
+            url: `/api/admin/${adminId}`,
+            method: 'delete',
+            successMessage: 'Admin soft deleted successfully'
+          }
+        : {
+            url: `/api/admin/restore/${adminId}`,
+            method: 'patch',
+            successMessage: 'Admin restored successfully'
+          };
+
+      // Make API call
+      const response = await axios({
+        method: apiConfig.method,
+        url: apiConfig.url,
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-      );
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        setSuccess("Admin deleted successfully!");
-        
-        // Mark the admin as deleted in the UI
-        const updatedAdmins = admins.map(admin => 
-          admin._id === selectedAdmin._id 
-            ? { ...admin, isDeleted: true, deletedAt: new Date() } 
-            : admin
-        );
-        
-        setAdmins(updatedAdmins);
-        
-        // Keep the selected admin but mark it as deleted for display
-        setSelectedAdmin({
-          ...selectedAdmin,
-          isDeleted: true,
-          deletedAt: new Date()
-        });
-      } else {
-        setError("Error deleting admin: " + (data.message || "Please try again."));
+      });
+
+      // Success handling
+      if (response.data.success) {
+        toast.success(apiConfig.successMessage);
+        navigate('/admin-list'); // Redirect to admin list page
       }
     } catch (error) {
-      console.error("Error deleting admin:", error);
-      setError("Error deleting admin. Please check your connection and try again.");
+      // Error handling
+      const errorMessage = error.response?.data?.message || `Failed to ${action} admin`;
+      toast.error(errorMessage);
+      console.error(`${action} admin error:`, error);
     } finally {
-      setIsSubmitting(false);
-      setIsConfirmingDelete(false);
+      setIsLoading(false);
     }
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-gray-100">
-        <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md text-center">
-          <div className="mb-6 text-blue-600">
-            <UserX className="h-12 w-12 mx-auto" />
-          </div>
-          <h2 className="text-2xl font-bold mb-4 text-gray-800">
-            Authentication Required
-          </h2>
-          <p className="text-gray-600 mb-6">
-            You must be logged in to access the admin deletion system.
-          </p>
-          <button
-            onClick={() => (window.location.href = "/login")}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-md font-medium transition duration-200 transform hover:scale-105"
-          >
-            Go to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex items-center mb-6">
-        <button
-          onClick={() => window.history.back()}
-          className="flex items-center text-gray-600 hover:text-gray-800 mr-4"
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center px-4 py-12"
+    >
+      <motion.div 
+        initial={{ scale: 0.9 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 300 }}
+        className="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-2xl border border-gray-200"
+      >
+        {/* Tab Navigation with Motion */}
+        <motion.div 
+          className="flex mb-4 bg-gray-100 rounded-full p-1"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
         >
-          <ArrowLeft className="h-5 w-5 mr-2" />
-          Back
-        </button>
-        <h1 className="text-2xl font-bold">Delete Admin</h1>
-      </div>
-      
-      {/* Search Form */}
-      <div className="bg-gray-100 p-4 rounded-lg mb-6">
-        <h2 className="text-lg font-semibold mb-4">Find Admin</h2>
-        <div className="flex flex-wrap gap-4">
-          <div className="w-full">
-            <label className="block mb-1">Search by Name, Username, or Email</label>
+          {['delete', 'restore'].map((tab) => (
+            <button
+              key={tab}
+              className={`w-1/2 py-2 text-sm font-medium rounded-full transition-all duration-300 ease-in-out ${
+                activeTab === tab 
+                  ? (tab === 'delete' 
+                      ? 'bg-red-500 text-white shadow-lg' 
+                      : 'bg-green-500 text-white shadow-lg')
+                  : 'bg-transparent text-gray-600 hover:bg-gray-200'
+              }`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab === 'delete' ? 'Delete Admin' : 'Restore Admin'}
+            </button>
+          ))}
+        </motion.div>
+
+        {/* Page Title and Description with Animation */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <h2 className="text-center text-3xl font-extrabold text-gray-900 flex justify-center items-center">
+            {activeTab === 'delete' 
+              ? <><Trash2 className="mr-2 text-red-500" /> Delete Admin</> 
+              : <><RefreshCcw className="mr-2 text-green-500" /> Restore Admin</>}
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            {activeTab === 'delete' 
+              ? 'Soft delete an admin account' 
+              : 'Restore a previously soft-deleted admin account'}
+          </p>
+        </motion.div>
+
+        {/* Action Form with Animated Input */}
+        <motion.form 
+          className="mt-8 space-y-6" 
+          onSubmit={(e) => handleAdminAction(e, activeTab)}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <motion.div 
+            className="rounded-md shadow-sm"
+            whileFocus={{ scale: 1.02 }}
+          >
             <input
+              id="adminId"
+              name="adminId"
               type="text"
-              value={searchQuery}
-              onChange={handleSearch}
-              className="w-full p-2 border rounded"
-              placeholder="Enter search term..."
+              required
+              className="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-300 ease-in-out"
+              placeholder="Enter Admin ID"
+              value={adminId}
+              onChange={(e) => setAdminId(e.target.value)}
             />
-          </div>
-        </div>
-      </div>
-      
-      {/* Status Messages */}
-      {statusMessage.type === 'error' && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 transform animate-fade-in-down">
-          <div className="flex items-center space-x-3">
-            <AlertCircle className="w-5 h-5 text-red-500" />
-            <p>{statusMessage.message}</p>
-          </div>
-        </div>
-      )}
-      
-      {statusMessage.type === 'success' && (
-        <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 transform animate-fade-in-down">
-          <div className="flex items-center space-x-3">
-            <CheckCircle className="w-5 h-5 text-green-500" />
-            <p>{statusMessage.message}</p>
-          </div>
-        </div>
-      )}
-      
-      {/* Loading Indicator */}
-      {loading && (
-        <div className="flex justify-center items-center py-8">
-          <Loader className="w-8 h-8 text-blue-500 animate-spin" />
-          <span className="ml-2 text-gray-600">Loading admins...</span>
-        </div>
-      )}
-      
-      {/* Loading Overlay for Delete Operation */}
-      {isSubmitting && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-white p-6 rounded-lg shadow-lg flex items-center space-x-4">
-            <Loader className="h-6 w-6 text-blue-600 animate-spin" />
-            <p className="text-lg font-medium text-gray-800">
-              Processing deletion...
-            </p>
-          </div>
-        </div>
-      )}
-      
-      <div className="max-w-3xl mx-auto">
-        {/* Admin List */}
-        {!loading && filteredAdmins.length === 0 && (
-          <div className="bg-white p-6 rounded-lg shadow-md text-center">
-            <p className="text-gray-500">No admins found</p>
-          </div>
-        )}
-        
-        {/* Selected Admin Details */}
-        {selectedAdmin && (
-          <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-            <div className="flex justify-between mb-4">
-              <h2 className="text-xl font-bold">Admin Details</h2>
-              {!selectedAdmin.isDeleted && !isConfirmingDelete && (
-                <button
-                  onClick={() => openDeleteConfirmation(selectedAdmin)}
-                  className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                  disabled={isSubmitting}
-                >
-                  Delete Admin
-                </button>
-              )}
-            </div>
-            
-            {/* Delete Confirmation */}
-            {isConfirmingDelete && (
-              <div className="mb-6 p-4 border border-red-300 bg-red-50 rounded-lg">
-                <div className="flex items-center gap-3 mb-3">
-                  <AlertTriangle className="w-6 h-6 text-red-500" />
-                  <h3 className="text-lg font-semibold text-red-700">Confirm Deletion</h3>
-                </div>
-                <p className="mb-4 text-gray-700">
-                  Are you sure you want to delete the admin account for <span className="font-semibold">{selectedAdmin.adminName}</span> (Username: {selectedAdmin.username})? This action cannot be undone easily.
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleDelete}
-                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? "Processing..." : "Confirm Delete"}
-                  </button>
-                  <button
-                    onClick={cancelDelete}
-                    className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </button>
-                </div>
+          </motion.div>
+
+          <motion.button
+            type="submit"
+            disabled={isLoading}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`group relative w-full flex justify-center items-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white transition-all duration-300 ease-in-out ${
+              isLoading 
+                ? 'bg-gray-500 cursor-not-allowed' 
+                : activeTab === 'delete'
+                  ? 'bg-red-600 hover:bg-red-700 focus:ring-2 focus:ring-red-500'
+                  : 'bg-green-600 hover:bg-green-700 focus:ring-2 focus:ring-green-500'
+            }`}
+          >
+            {isLoading ? (
+              <div className="flex items-center">
+                <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Processing...
               </div>
+            ) : (
+              <>
+                {activeTab === 'delete' 
+                  ? <><Trash2 className="mr-2" /> Delete Admin</> 
+                  : <><RefreshCcw className="mr-2" /> Restore Admin</>}
+              </>
             )}
-            
-            {/* Admin Info Display */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-gray-600">Admin Name</p>
-                <p className="font-medium">{selectedAdmin.adminName || 'Not provided'}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Username</p>
-                <p className="font-medium">{selectedAdmin.username || 'Not provided'}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Email</p>
-                <p className="font-medium">{selectedAdmin.email || 'Not provided'}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Role</p>
-                <p className="font-medium">{selectedAdmin.role || 'admin'}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Status</p>
-                <p className={`font-medium ${selectedAdmin.isDeleted ? 'text-red-600' : 'text-green-600'}`}>
-                  {selectedAdmin.isDeleted ? 'Deleted' : 'Active'}
-                </p>
-              </div>
-              {selectedAdmin.isDeleted && selectedAdmin.deletedAt && (
-                <div>
-                  <p className="text-gray-600">Deleted At</p>
-                  <p className="font-medium text-red-600">
-                    {new Date(selectedAdmin.deletedAt).toLocaleString()}
-                  </p>
-                </div>
+          </motion.button>
+        </motion.form>
+
+        {/* Additional Information with Animated Note */}
+        <AnimatePresence>
+          <motion.div 
+            key={activeTab}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="text-center"
+          >
+            <p className="mt-2 text-sm text-gray-600 flex items-center justify-center">
+              {activeTab === 'delete' ? (
+                <>
+                  <AlertTriangle className="mr-2 text-yellow-500" />
+                  <span>
+                    <span className="font-medium text-red-600">Note:</span> Soft 
+                    deletion means the admin account will be marked as deleted but 
+                    can be restored later.
+                  </span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="mr-2 text-green-500" />
+                  <span>
+                    <span className="font-medium text-green-600">Note:</span> This 
+                    will reactivate a previously soft-deleted admin account.
+                  </span>
+                </>
               )}
-              {selectedAdmin.createdAt && (
-                <div>
-                  <p className="text-gray-600">Created At</p>
-                  <p className="font-medium">
-                    {new Date(selectedAdmin.createdAt).toLocaleString()}
-                  </p>
-                </div>
-              )}
-              {selectedAdmin.updatedAt && (
-                <div>
-                  <p className="text-gray-600">Updated At</p>
-                  <p className="font-medium">
-                    {new Date(selectedAdmin.updatedAt).toLocaleString()}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        
-        {/* Admins List */}
-        {!loading && filteredAdmins.length > 0 && (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-lg font-semibold mb-4">Available Admins</h2>
-            <div className="space-y-4">
-              {filteredAdmins.map((admin) => (
-                <div
-                  key={admin._id}
-                  className={`flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer ${
-                    selectedAdmin && selectedAdmin._id === admin._id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                  } ${admin.isDeleted ? 'opacity-70' : ''}`}
-                  onClick={() => setSelectedAdmin(admin)}
-                >
-                  <div>
-                    <h3 className="font-medium text-gray-900">
-                      {admin.adminName}
-                      {admin.isDeleted && <span className="ml-2 text-red-600 text-sm">(Deleted)</span>}
-                    </h3>
-                    <div className="text-sm text-gray-500">
-                      <p>Username: {admin.username}</p>
-                      <p>Email: {admin.email}</p>
-                    </div>
-                  </div>
-                  {!admin.isDeleted && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openDeleteConfirmation(admin);
-                      }}
-                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+            </p>
+          </motion.div>
+        </AnimatePresence>
+      </motion.div>
+    </motion.div>
   );
 };
 
