@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
   // Logout function - define early to use in refreshToken
   const logout = useCallback(async () => {
     try {
-      await axios.post("/api/auth/logout", {}, { withCredentials: true });
+      await axios.post(`${process.env.REACT_APP_BACKEND_BASE_URL}/api/auth/logout`, {}, { withCredentials: true });
     } catch (err) {
       console.error("Logout failed:", err);
     } finally {
