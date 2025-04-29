@@ -82,6 +82,14 @@ app.use("/api", uploadRoutes);
 app.use("/api/guide-allocation", guideAllocationRoutes);
 app.use("/api/notifications", notificationRoutes);
 
+// Add a base route to confirm backend is running
+app.get('/', (req, res) => {
+  res.send('✅ Internship Portal Backend is running');
+});
+
+// Silently handle favicon.ico requests to avoid 404s in the browser
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // Server Listening
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
