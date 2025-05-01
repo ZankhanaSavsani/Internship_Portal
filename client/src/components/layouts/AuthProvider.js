@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
   // Logout function
   const logout = useCallback(async () => {
     try {
-      await axios.post("/api/auth/logout"); // Changed to GET (not POST) for logout
+      await axios.post(`${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/logout`); 
     } catch (err) {
       console.error("Logout failed:", err);
     } finally {
@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }) => {
   const refreshToken = useCallback(async (retries = 3) => {
     const attemptRefresh = async (retriesLeft) => {
       try {
-        const response = await axios.get("/api/auth/refresh-token");
+        const response = await axios.get(`${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/refresh-token`);
         return response.data.success;
       } catch (err) {
         console.error("Token refresh failed:", err);
@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const response = await axios.get("/api/auth/me");
+        const response = await axios.get(`${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/me`);
         if (response.data.success) {
           setUser(response.data.user);
           setIsAuthenticated(true);
@@ -99,7 +99,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       setLoading(true);
-      const response = await axios.post("/api/auth/login", credentials);
+      const response = await axios.post(`${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/login`, credentials);
       if (response.data.success) {
         setUser(response.data.user);
         setIsAuthenticated(true);
@@ -127,8 +127,8 @@ export const AuthProvider = ({ children }) => {
         if (
           error.response?.status === 401 &&
           !originalRequest._retry &&
-          !originalRequest.url.includes("/api/auth/login") &&
-          !originalRequest.url.includes("/api/auth/refresh-token")
+          !originalRequest.url.includes(`${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/login`) &&
+          !originalRequest.url.includes(`${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/refresh-token`)
         ) {
           originalRequest._retry = true;
           const refreshed = await refreshToken();
