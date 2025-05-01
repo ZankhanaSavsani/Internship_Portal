@@ -111,12 +111,7 @@ exports.login = [
       const { role, username, password, studentId, semester } = req.body;
 
       // Input validation with detailed logging
-      if (
-        !role ||
-        !password ||
-        (!username && !studentId) ||
-        (role === "student" && !semester)
-      ) {
+      if (!role || !password || (!username && !studentId) || (role === "student" && !semester)) {
         const missingFields = ["role", "password"];
         if (!username && role !== "student") missingFields.push("username");
         if (!studentId && role === "student") missingFields.push("studentId");
@@ -143,10 +138,9 @@ exports.login = [
       }
 
       // Determine the login identifier based on role
-      const loginIdentifier =
-        role.toLowerCase() === "student"
-          ? { studentId, semester }
-          : { username };
+      const loginIdentifier = role.toLowerCase() === "student" 
+        ? { studentId, semester } 
+        : { username };
 
       // User authentication
       const user = await UserModel.findOne(loginIdentifier)
@@ -179,19 +173,27 @@ exports.login = [
       setAuthCookies(res, accessToken, refreshToken);
       setRoleSpecificCookies(res, user, role);
 
-      // Log success (with performance metrics in non-production)
+      // Prepare user data for response (excluding sensitive info)
+      const userResponse = {
+        id: user._id,
+        role: user.role,
+        [role.toLowerCase() === "student" ? "studentId" : "username"]:
+          role.toLowerCase() === "student" ? user.studentId : user.username,
+      };
+
+      // Add semester only for students
+      if (role.toLowerCase() === "student") {
+        userResponse.semester = user.semester;
+        userResponse.studentName = user.studentName;
+        userResponse.isOnboarded = user.isOnboarded;
+      }
+
+      // Log success
       const logData = {
         userId: user._id,
         role,
         loginTime: new Date(),
       };
-
-      if (role.toLowerCase() === "student") {
-        logData.studentId = user.studentId;
-        logData.semester = user.semester;
-      } else {
-        logData.username = user.username;
-      }
 
       if (startTime) {
         logData.processDuration = Date.now() - startTime;
@@ -199,24 +201,12 @@ exports.login = [
 
       logger.info("[LOGIN SUCCESS]", logData);
 
-      return res
-        .status(200)
-        .json({
-          success: true,
-          message: "Login successful",
-          user: {
-            id: user._id,
-            role: user.role,
-            [role.toLowerCase() === "student" ? "studentId" : "username"]:
-              role.toLowerCase() === "student" ? user.studentId : user.username,
-            semester:
-              role.toLowerCase() === "student" ? user.semester : undefined,
-          },
-          tokens: {
-            accessToken,
-            refreshToken,
-          },
-        });
+      return res.status(200).json({
+        success: true,
+        message: "Login successful",
+        user: userResponse,
+        // Don't return tokens in response when using HTTP-only cookies
+      });
     } catch (error) {
       const errorLog = {
         error: error.message,

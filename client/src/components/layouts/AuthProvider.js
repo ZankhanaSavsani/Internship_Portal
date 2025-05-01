@@ -1,4 +1,10 @@
-import React, { createContext, useState, useEffect, useContext, useCallback } from "react";
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  useCallback,
+} from "react";
 import axios from "../../api/axiosInstance";
 import { useNavigate } from "react-router-dom";
 
@@ -21,7 +27,9 @@ export const AuthProvider = ({ children }) => {
   // Logout function
   const logout = useCallback(async () => {
     try {
-      await axios.post(`${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/logout`);
+      await axios.post(
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/logout`
+      );
     } catch (err) {
       console.error("Logout failed:", err);
     } finally {
@@ -34,10 +42,15 @@ export const AuthProvider = ({ children }) => {
   // Refresh token function
   const refreshToken = useCallback(async () => {
     try {
-      const response = await axios.get(`${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/refresh-token`);
+      const response = await axios.get(
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/refresh-token`,
+        { withCredentials: true }
+      );
       return response.data.success;
     } catch (err) {
-      console.error("Token refresh failed:", err);
+      if (err.response?.status === 404) {
+        console.error("Refresh token endpoint not found");
+      }
       return false;
     }
   }, []);
@@ -45,21 +58,23 @@ export const AuthProvider = ({ children }) => {
   // Check authentication status
   const checkAuthStatus = useCallback(async () => {
     try {
-      const response = await axios.get(`${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/me`);
+      const response = await axios.get(
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/me`,
+        {
+          withCredentials: true,
+        }
+      );
       if (response.data.success) {
         setUser(response.data.user);
         setIsAuthenticated(true);
       } else {
-        logout();
+        await logout();
       }
     } catch (err) {
       if (err.response?.status === 401) {
-        logout();
-      } else {
-        console.error("Auth check failed:", err);
+        await logout();
       }
-    } finally {
-      setLoading(false);
+      console.error("Auth check failed:", err);
     }
   }, [logout]);
 
@@ -67,7 +82,7 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus();
 
     const tokenRefreshInterval = setInterval(() => {
-      refreshToken().then(success => {
+      refreshToken().then((success) => {
         if (!success) logout();
       });
     }, 14 * 60 * 1000); // Refresh every 14 minutes
@@ -79,21 +94,29 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       setLoading(true);
-      setError(null);
-      const response = await axios.post(
-        `${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/login`,
-        credentials
-      );
+      const response = await axios.post('/api/auth/login', credentials, {
+        withCredentials: true
+      });
       
       if (response.data.success) {
-        await checkAuthStatus(); // Verify auth status after login
-        return { success: true, data: response.data };
+        setUser(response.data.user);
+        setIsAuthenticated(true);
+        
+        // Check if student needs onboarding
+        if (response.data.user.role === 'student' && !response.data.user.isOnboarded) {
+          navigate('/onboarding');
+        } else {
+          navigate(`/${response.data.user.role}`);
+        }
+        
+        return { success: true };
       }
-      throw new Error(response.data.message || "Login failed");
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || err.message || "Login failed";
-      setError(errorMessage);
-      return { success: false, message: errorMessage };
+      return { success: false, message: response.data.message };
+    } catch (error) {
+      return { 
+        success: false, 
+        message: error.response?.data?.message || "Login failed" 
+      };
     } finally {
       setLoading(false);
     }
@@ -102,8 +125,8 @@ export const AuthProvider = ({ children }) => {
   // Response interceptor for handling 401 errors
   useEffect(() => {
     const interceptor = axios.interceptors.response.use(
-      response => response,
-      async error => {
+      (response) => response,
+      async (error) => {
         if (error.config && error.response?.status === 401) {
           try {
             const refreshed = await refreshToken();
