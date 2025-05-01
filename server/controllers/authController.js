@@ -6,10 +6,7 @@ const TokenBlacklist = require("../models/TokenBlacklist");
 const Admin = require("../models/AdminModel");
 const Guide = require("../models/GuideModel");
 const Student = require("../models/StudentModel");
-const {
-  loginLimiter,
-  refreshLimiter,
-} = require("../middleware/authMiddleware");
+const { loginLimiter, refreshLimiter } = require("../middleware/authMiddleware");
 
 const ROLE_MODEL_MAP = {
   admin: Admin,
@@ -24,15 +21,17 @@ const ROLE_MODEL_MAP = {
  */
 const createCookieOptions = (maxAge) => {
   const isProduction = process.env.NODE_ENV === "production";
+  const backendUrl = process.env.BACKEND_URL || "http://localhost:5000";
+  const domain = isProduction ? new URL(backendUrl).hostname : undefined;
 
   return {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? "none" : "lax",
     maxAge,
-    domain: isProduction ? process.env.COOKIE_DOMAIN : undefined,
+    domain,
     path: "/",
-    partitioned: true, // New for Chrome's cookie changes
+    partitioned: true,
   };
 };
 
@@ -42,7 +41,7 @@ const createCookieOptions = (maxAge) => {
  * @returns {Promise<boolean>} True if token is blacklisted
  */
 const isTokenBlacklisted = async (token) => {
-  const blacklistedToken = await TokenBlacklist.findOne({ token: token });
+  const blacklistedToken = await TokenBlacklist.findOne({ token });
   return !!blacklistedToken;
 };
 
@@ -53,7 +52,7 @@ const isTokenBlacklisted = async (token) => {
  * @param {string} refreshToken - JWT refresh token
  */
 const setAuthCookies = (res, accessToken, refreshToken) => {
-  const ACCESS_TOKEN_AGE = 24 * 60 * 60 * 1000; // 1 day
+  const ACCESS_TOKEN_AGE = 15 * 60 * 1000; // 15 minutes
   const REFRESH_TOKEN_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 
   const cookieOptions = createCookieOptions(ACCESS_TOKEN_AGE);
@@ -80,16 +79,20 @@ const setAuthCookies = (res, accessToken, refreshToken) => {
 const setRoleSpecificCookies = (res, user, role) => {
   const roleHandlers = {
     student: (user, options) => {
-      if (user._id && user.studentName) {
-        res.cookie("userId", user._id, options); // Set userId cookie
+      res.cookie("userId", user._id.toString(), options);
+      if (user.studentName) {
         res.cookie("studentName", user.studentName, options);
-        logger.debug("[STUDENT COOKIES SET]", {
-          hasUserId: !!user._id,
-          hasStudentName: !!user.studentName,
-        });
       }
+      res.cookie("role", user.role, options);
     },
-    // Add other role handlers here as needed
+    admin: (user, options) => {
+      res.cookie("userId", user._id.toString(), options);
+      res.cookie("role", user.role, options);
+    },
+    guide: (user, options) => {
+      res.cookie("userId", user._id.toString(), options);
+      res.cookie("role", user.role, options);
+    },
   };
 
   const handler = roleHandlers[role.toLowerCase()];
@@ -106,61 +109,34 @@ const setRoleSpecificCookies = (res, user, role) => {
 exports.login = [
   loginLimiter,
   async (req, res) => {
-    const startTime = process.env.NODE_ENV !== "production" ? Date.now() : null;
     try {
       const { role, username, password, studentId, semester } = req.body;
 
-      // Input validation with detailed logging
-      if (
-        !role ||
-        !password ||
-        (!username && !studentId) ||
-        (role === "student" && !semester)
-      ) {
-        const missingFields = ["role", "password"];
-        if (!username && role !== "student") missingFields.push("username");
-        if (!studentId && role === "student") missingFields.push("studentId");
-        if (role === "student" && !semester) missingFields.push("semester");
-
-        logger.warn("[LOGIN ATTEMPT] Missing fields", { missingFields });
+      // Input validation
+      if (!role || !password || (!username && !studentId) || (role === "student" && !semester)) {
         return res.status(400).json({
           success: false,
           message: "All fields are required",
         });
       }
 
-      // Role validation
       const UserModel = ROLE_MODEL_MAP[role.toLowerCase()];
       if (!UserModel) {
-        logger.warn("[LOGIN ATTEMPT] Invalid role", {
-          attemptedRole: role,
-          validRoles: Object.keys(ROLE_MODEL_MAP),
-        });
         return res.status(400).json({
           success: false,
           message: "Invalid role selected",
         });
       }
 
-      // Determine the login identifier based on role
-      const loginIdentifier =
-        role.toLowerCase() === "student"
-          ? { studentId, semester }
-          : { username };
+      const loginIdentifier = role.toLowerCase() === "student" 
+        ? { studentId, semester } 
+        : { username };
 
-      // User authentication
       const user = await UserModel.findOne(loginIdentifier)
         .select("+password")
         .exec();
 
       if (!user || !(await user.comparePassword(password))) {
-        logger.warn("[LOGIN FAILED]", {
-          [role.toLowerCase() === "student" ? "studentId" : "username"]:
-            role.toLowerCase() === "student" ? studentId : username,
-          role,
-          semester: role.toLowerCase() === "student" ? semester : undefined,
-          reason: !user ? "User not found" : "Invalid password",
-        });
         return res.status(401).json({
           success: false,
           message: "Invalid credentials",
@@ -179,7 +155,7 @@ exports.login = [
       setAuthCookies(res, accessToken, refreshToken);
       setRoleSpecificCookies(res, user, role);
 
-      // Prepare user data for response (excluding sensitive info)
+      // Prepare response
       const userResponse = {
         id: user._id,
         role: user.role,
@@ -187,45 +163,21 @@ exports.login = [
           role.toLowerCase() === "student" ? user.studentId : user.username,
       };
 
-      // Add semester only for students
       if (role.toLowerCase() === "student") {
         userResponse.semester = user.semester;
         userResponse.studentName = user.studentName;
         userResponse.isOnboarded = user.isOnboarded;
       }
 
-      // Log success
-      const logData = {
-        userId: user._id,
-        role,
-        loginTime: new Date(),
-      };
-
-      if (startTime) {
-        logData.processDuration = Date.now() - startTime;
-      }
-
-      logger.info("[LOGIN SUCCESS]", logData);
+      logger.info("[LOGIN SUCCESS]", { userId: user._id, role });
 
       return res.status(200).json({
         success: true,
         message: "Login successful",
         user: userResponse,
-        // Don't return tokens in response when using HTTP-only cookies
       });
     } catch (error) {
-      const errorLog = {
-        error: error.message,
-        stack: process.env.NODE_ENV !== "production" ? error.stack : undefined,
-        requestBody: redactSensitiveData({ ...req.body }, ["password"]),
-      };
-
-      if (startTime) {
-        errorLog.processDuration = Date.now() - startTime;
-      }
-
-      logger.error("[LOGIN ERROR]", errorLog);
-
+      logger.error("[LOGIN ERROR]", { error: error.message });
       return res.status(500).json({
         success: false,
         message: "An error occurred during login",
@@ -242,114 +194,54 @@ exports.login = [
 exports.refreshToken = [
   refreshLimiter,
   async (req, res) => {
-    const startTime = process.env.NODE_ENV !== "production" ? Date.now() : null;
     try {
       const { refreshToken } = req.cookies;
 
       if (!refreshToken) {
-        logger.warn("[REFRESH TOKEN] Missing token", {
-          availableCookies: Object.keys(req.cookies),
-        });
         return res.status(401).json({
           success: false,
           message: "Refresh token is required",
         });
       }
 
-      // Check if token is blacklisted
       if (await isTokenBlacklisted(refreshToken)) {
-        logger.warn("[REFRESH TOKEN] Attempted use of blacklisted token");
         return res.status(401).json({
           success: false,
           message: "Token has been revoked",
         });
       }
 
-      // Verify token
       const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
 
-      // Validate token type
       if (decoded.type !== "refresh") {
-        logger.warn("[REFRESH TOKEN] Invalid token type", {
-          expectedType: "refresh",
-          receivedType: decoded.type,
-        });
         return res.status(403).json({
           success: false,
           message: "Invalid token type",
         });
       }
 
-      // Check token expiration
-      if (decoded.exp && decoded.exp < Date.now() / 1000) {
-        logger.warn("[REFRESH TOKEN] Expired token", {
-          expiry: new Date(decoded.exp * 1000),
-          currentTime: new Date(),
-        });
-        return res.status(401).json({
-          success: false,
-          message: "Refresh token has expired",
-        });
-      }
-
-      // Find and validate user
       const UserModel = ROLE_MODEL_MAP[decoded.role];
       const user = await UserModel.findById(decoded.id);
 
       if (!user) {
-        logger.warn("[REFRESH TOKEN] User not found", {
-          userId: decoded.id,
-          role: decoded.role,
-        });
         return res.status(401).json({
           success: false,
           message: "User not found",
         });
       }
 
-      // Generate new access token
       const newAccessToken = generateToken(user);
-
-      // Set new access token cookie
       res.cookie(
         "accessToken",
         newAccessToken,
-        createCookieOptions(24 * 60 * 60 * 1000)
+        createCookieOptions(15 * 60 * 1000)
       );
-
-      // Log success (with performance metrics in non-production)
-      const logData = {
-        userId: user._id,
-        username: user.username,
-        role: user.role,
-      };
-
-      if (startTime) {
-        logData.processDuration = Date.now() - startTime;
-      }
-
-      logger.info("[TOKEN REFRESHED]", logData);
 
       return res.json({
         success: true,
         message: "Token refreshed successfully",
       });
     } catch (error) {
-      const errorLog = {
-        error: error.message,
-        stack: process.env.NODE_ENV !== "production" ? error.stack : undefined,
-        cookies: {
-          hasRefreshToken: !!req.cookies.refreshToken,
-          hasAccessToken: !!req.cookies.accessToken,
-        },
-      };
-
-      if (startTime) {
-        errorLog.processDuration = Date.now() - startTime;
-      }
-
-      logger.error("[REFRESH TOKEN ERROR]", errorLog);
-
       return res.status(401).json({
         success: false,
         message: "Invalid refresh token",
@@ -357,25 +249,6 @@ exports.refreshToken = [
     }
   },
 ];
-
-const getCookieDomain = () => {
-  if (process.env.NODE_ENV !== "production") return undefined;
-
-  // For Render backend
-  if (process.env.BACKEND_URL.includes("onrender.com")) {
-    return ".onrender.com";
-  }
-
-  // Add other hosting providers as needed
-  return undefined;
-};
-
-// Then in clearAllAuthCookies:
-// const domain = getCookieDomain();
-// if (domain) {
-//   res.cookie(cookieName, "", { ...cookieOptions, domain });
-// }
-// res.cookie(cookieName, "", cookieOptions); // Always clear without domain too
 
 /**
  * @desc    Logout User
@@ -386,106 +259,41 @@ exports.logout = async (req, res) => {
   try {
     const { refreshToken } = req.cookies;
     const isProduction = process.env.NODE_ENV === "production";
+    const domain = isProduction ? new URL(process.env.BACKEND_URL).hostname : undefined;
 
-    // Clear HTTP-only cookies with proper domain settings
-    const clearAllAuthCookies = () => {
-      const cookieOptions = {
+    // Clear all auth cookies
+    const cookiesToClear = [
+      "accessToken", "refreshToken", "userId", 
+      "studentName", "role", "isAuthenticated"
+    ];
+
+    cookiesToClear.forEach(name => {
+      res.cookie(name, "", {
         httpOnly: true,
         secure: isProduction,
         sameSite: isProduction ? "none" : "lax",
         path: "/",
         expires: new Date(0),
-        domain: isProduction ? getCookieDomain() : undefined,
-      };
-
-      const cookiesToClear = [
-        "accessToken",
-        "refreshToken",
-        "studentId",
-        "studentName",
-        "isAuthenticated",
-        "userId",
-        "user",
-      ];
-
-      cookiesToClear.forEach((cookieName) => {
-        // Clear with production domain
-        res.cookie(cookieName, "", cookieOptions);
-
-        // Additional clear for development/localhost
-        if (!isProduction) {
-          res.cookie(cookieName, "", {
-            ...cookieOptions,
-            domain: undefined,
-            sameSite: "lax",
-          });
-        }
+        domain
       });
-    };
+    });
 
-    // Blacklist token if exists
+    // Blacklist refresh token if exists
     if (refreshToken) {
-      try {
-        await TokenBlacklist.updateOne(
-          { token: refreshToken },
-          {
-            $setOnInsert: {
-              token: refreshToken,
-              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            },
-          },
-          { upsert: true }
-        );
-      } catch (error) {
-        if (error.code === 11000) {
-          logger.warn("[DUPLICATE TOKEN BLACKLIST ATTEMPT]", {
-            token: refreshToken.slice(-10) + "...",
-          });
-        }
-      }
+      await TokenBlacklist.create({
+        token: refreshToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      });
     }
-
-    // Clear all cookies
-    clearAllAuthCookies();
-
-    // Additional security headers
-    res.set("Clear-Site-Data", '"cookies", "storage"');
 
     return res.status(200).json({
       success: true,
       message: "Logged out successfully",
     });
   } catch (error) {
-    logger.error("[LOGOUT ERROR]", {
-      error: error.message,
-      stack: process.env.NODE_ENV !== "production" ? error.stack : undefined,
-    });
     return res.status(500).json({
       success: false,
       message: "An error occurred during logout",
-    });
-  }
-};
-
-// Backend: Fetch user by _id
-exports.getUserById = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Find user by _id
-    const user = await UserModel.findById(id);
-    if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
-    }
-
-    res.json({ success: true, user });
-  } catch (error) {
-    console.error("Error fetching user:", error);
-    res.status(500).json({
-      success: false,
-      message: "An error occurred while fetching user data",
     });
   }
 };
@@ -497,10 +305,9 @@ exports.getUserById = async (req, res) => {
  */
 exports.getMe = async (req, res) => {
   try {
-    const userId = req.user.id; // Extracted from the authentication middleware
-    const role = req.user.role.toLowerCase(); // Extract role from token payload
+    const userId = req.user.id;
+    const role = req.user.role.toLowerCase();
 
-    // Ensure a valid role is provided
     const UserModel = ROLE_MODEL_MAP[role];
     if (!UserModel) {
       return res.status(400).json({
@@ -509,7 +316,6 @@ exports.getMe = async (req, res) => {
       });
     }
 
-    // Fetch user details (excluding password)
     const user = await UserModel.findById(userId).select("-password");
     if (!user) {
       return res.status(404).json({
@@ -523,7 +329,6 @@ exports.getMe = async (req, res) => {
       user,
     });
   } catch (error) {
-    logger.error("[GET ME ERROR]", { error: error.message });
     return res.status(500).json({
       success: false,
       message: "An error occurred while fetching user details",

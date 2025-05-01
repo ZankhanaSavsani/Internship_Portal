@@ -1,280 +1,179 @@
-import React, {
-  createContext,
-  useState,
-  useEffect,
-  useContext,
-  useCallback,
-} from "react";
+import React, { createContext, useState, useEffect, useContext, useCallback } from "react";
 import axios from "../../api/axiosInstance";
 import { useNavigate } from "react-router-dom";
+import Cookies from 'js-cookie';
 
-// Create Auth Context
 export const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(() => {
+    try {
+      const userCookie = Cookies.get('user');
+      return userCookie ? JSON.parse(userCookie) : null;
+    } catch (error) {
+      console.error("Error parsing user cookie:", error);
+      return null;
+    }
+  });
+  
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    try {
+      const authCookie = Cookies.get('isAuthenticated');
+      return authCookie === 'true';
+    } catch (error) {
+      console.error("Error parsing isAuthenticated cookie:", error);
+      return false;
+    }
+  });
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Configure axios to always include credentials
+  // Configure axios defaults
   useEffect(() => {
     axios.defaults.withCredentials = true;
-    axios.defaults.baseURL =
-      process.env.REACT_APP_BACKEND_BASEURL ||
-      "https://internship-portal-backend-4zb5.onrender.com";
+    axios.defaults.baseURL = process.env.REACT_APP_BACKEND_BASEURL;
   }, []);
 
-  // Enhanced logout function
   const logout = useCallback(async () => {
     try {
-      // Extract domain from backend URL (handles both https:// and ports)
-      const backendUrl = new URL(process.env.REACT_APP_BACKEND_BASEURL);
-      const domainParts = backendUrl.hostname.split('.');
-      const rootDomain = domainParts.slice(-2).join('.'); // Gets 'onrender.com' from 'xyz.onrender.com'
+      await axios.post("/api/auth/logout", {}, { withCredentials: true });
       
-      // Cookie clearing utility
-      const clearCookie = (name) => {
-        // Clear with root domain (for subdomains)
-        document.cookie = `${name}=; path=/; domain=.${rootDomain}; expires=Thu, 01 Jan 1970 00:00:00 GMT; secure`;
-        // Clear with exact hostname
-        document.cookie = `${name}=; path=/; domain=${backendUrl.hostname}; expires=Thu, 01 Jan 1970 00:00:00 GMT; secure`;
-        // Clear without domain (for localhost)
+      // Clear all cookies on client side
+      document.cookie.split(";").forEach(cookie => {
+        const [name] = cookie.split("=");
         document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-      };
-  
-      // Clear all auth cookies
-      [
-        'accessToken',
-        'refreshToken',
-        'userId',
-        'user',
-        'isAuthenticated',
-        'studentId',
-        'studentName'
-      ].forEach(clearCookie);
-  
-      // API logout call
-      await axios.post("/api/auth/logout", {}, { 
-        withCredentials: true,
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
       });
-  
-      // Clear client storage
-      localStorage.clear();
-      sessionStorage.clear();
-  
-      // Reset state
+
+      // Clear JS cookies
+      Cookies.remove('user');
+      Cookies.remove('isAuthenticated');
+      
       setUser(null);
       setIsAuthenticated(false);
       setError(null);
-  
-      // Force reload with cache busting
-      window.location.assign(`/login?t=${Date.now()}`);
-  
-    } catch (err) {
-      console.error("Logout error:", {
-        message: err.message,
-        cookies: document.cookie,
-        backendUrl: process.env.REACT_APP_BACKEND_BASEURL
-      });
       
-      // Fallback hard reset
-      window.location.href = `/login?error=logout_failed&t=${Date.now()}`;
-    }
-  }, [navigate]);
-
-  // Refresh token function
-  const refreshToken = useCallback(async () => {
-    try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/refresh-token`,
-        { withCredentials: true }
-      );
-      return response.data.success;
+      // Force a hard redirect to login
+      window.location.href = '/login';
     } catch (err) {
-      if (err.response?.status === 404) {
-        console.error("Refresh token endpoint not found");
+      console.error("Logout error:", err);
+      window.location.href = '/login';
+    }
+  }, []);
+
+  const checkAuthStatus = useCallback(async () => {
+    try {
+      const response = await axios.get("/api/auth/me", { withCredentials: true });
+      if (response.data.success) {
+        const userData = response.data.user;
+        setUser(userData);
+        setIsAuthenticated(true);
+        Cookies.set('user', JSON.stringify(userData), { expires: 7 });
+        Cookies.set('isAuthenticated', 'true', { expires: 7 });
+        return true;
       }
+      return false;
+    } catch (err) {
       return false;
     }
   }, []);
 
-  // Check authentication status
-  const checkAuthStatus = useCallback(async () => {
-    try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/me`,
-        {
-          withCredentials: true,
-        }
-      );
-      if (response.data.success) {
-        setUser(response.data.user);
-        setIsAuthenticated(true);
-      } else {
-        await logout();
-      }
-    } catch (err) {
-      if (err.response?.status === 401) {
-        await logout();
-      }
-      console.error("Auth check failed:", err);
-    }
-  }, [logout]);
-
+  // Initial auth check and route protection
   useEffect(() => {
-    let responseInterceptor;
-
-    const checkAuthAndRedirect = async () => {
+    const initializeAuth = async () => {
       try {
-        // Check if we're already on the login page
-        if (window.location.pathname === '/login') {
-          setLoading(false);
-          return;
-        }
-
-        const response = await axios.get(
-          `${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/me`,
-          { withCredentials: true }
-        );
-
-        if (response.data.success) {
-          setUser(response.data.user);
-          setIsAuthenticated(true);
-
-          // Only navigate if we're not already on the correct path
-          const currentPath = window.location.pathname;
-          const targetPath =
-            response.data.user.role === "student" &&
-            (!response.data.user.studentName || !response.data.user.isOnboarded)
-              ? "/student/onboarding"
-              : `/${response.data.user.role}`;
-
-          if (!currentPath.startsWith(targetPath)) {
-            navigate(targetPath, { replace: true });
+        const isAuth = await checkAuthStatus();
+        const currentPath = window.location.pathname;
+        
+        if (!isAuth) {
+          if (currentPath !== '/login') {
+            navigate('/login', { replace: true });
           }
         } else {
-          // If not authenticated, clear state and redirect to login
-          setUser(null);
-          setIsAuthenticated(false);
-          setError(null);
-          navigate('/login', { replace: true });
+          // User is authenticated, redirect based on role
+          const targetPath = user?.role === "student" && !user?.isOnboarded 
+            ? "/student/onboarding" 
+            : `/${user?.role}`;
+            
+          if (currentPath === '/login' || currentPath === '/') {
+            navigate(targetPath, { replace: true });
+          }
         }
       } catch (err) {
-        if (err.response?.status === 401) {
-          // If unauthorized, clear state and redirect to login
-          setUser(null);
-          setIsAuthenticated(false);
-          setError(null);
-          navigate('/login', { replace: true });
-        }
+        console.error("Auth initialization error:", err);
+        navigate('/login', { replace: true });
       } finally {
         setLoading(false);
       }
     };
 
-    // Add response interceptor for handling 401 errors
-    responseInterceptor = axios.interceptors.response.use(
-      (response) => response,
-      async (error) => {
-        if (error.config && error.response?.status === 401) {
-          try {
-            const refreshed = await refreshToken();
-            if (refreshed) {
-              return axios(error.config);
-            }
-            // If refresh fails, clear state and redirect to login
-            setUser(null);
-            setIsAuthenticated(false);
-            setError(null);
-            navigate('/login', { replace: true });
-          } catch (err) {
-            setUser(null);
-            setIsAuthenticated(false);
-            setError(null);
-            navigate('/login', { replace: true });
-          }
-        }
-        return Promise.reject(error);
-      }
-    );
+    initializeAuth();
+  }, [checkAuthStatus, navigate, user]);
 
-    // Only check auth if not on login page
-    if (window.location.pathname !== '/login') {
-      checkAuthAndRedirect();
-    } else {
-      setLoading(false);
-    }
-
-    const tokenRefreshInterval = setInterval(() => {
-      if (window.location.pathname !== '/login') {
-        refreshToken().then((success) => {
-          if (!success) {
-            setUser(null);
-            setIsAuthenticated(false);
-            setError(null);
-            navigate('/login', { replace: true });
-          }
-        });
-      }
-    }, 14 * 60 * 1000);
-
-    // Sync logout across tabs
-    const syncLogout = (event) => {
-      if (event.key === "logout") {
-        setUser(null);
-        setIsAuthenticated(false);
-        navigate("/login", { replace: true });
-      }
-    };
-
-    window.addEventListener("storage", syncLogout);
-
-    return () => {
-      clearInterval(tokenRefreshInterval);
-      window.removeEventListener("storage", syncLogout);
-      if (responseInterceptor) {
-        axios.interceptors.response.eject(responseInterceptor);
-      }
-    };
-  }, [navigate, logout, refreshToken]);
-
-  // Login function
   const login = async (credentials) => {
     try {
       setLoading(true);
       setError(null);
 
       const response = await axios.post(
-        `${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/login`,
+        "/api/auth/login",
         credentials,
         { withCredentials: true }
       );
 
       if (response.data.success) {
-        setUser(response.data.user);
+        const userData = response.data.user;
+        setUser(userData);
         setIsAuthenticated(true);
-        localStorage.setItem("logout", Date.now().toString());
-        // Force a hard refresh to ensure all cookies are properly set
-        window.location.href = `/${response.data.user.role}`;
+        Cookies.set('user', JSON.stringify(userData), { expires: 7 });
+        Cookies.set('isAuthenticated', 'true', { expires: 7 });
+        
+        // Determine redirect path
+        const redirectPath = userData.role === "student" && !userData.isOnboarded
+          ? "/student/onboarding"
+          : `/${userData.role}`;
+          
+        // Use navigate instead of window.location for smoother transition
+        navigate(redirectPath, { replace: true });
         return { success: true };
       }
       return { success: false, message: response.data.message };
     } catch (error) {
-      return {
-        success: false,
-        message: error.response?.data?.message || "Login failed",
-      };
+      const errorMessage = error.response?.data?.message || "Login failed";
+      setError(errorMessage);
+      return { success: false, message: errorMessage };
     } finally {
       setLoading(false);
     }
   };
+
+  // Setup Axios Interceptor for Automatic Token Refresh on 401 Errors
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const originalRequest = error.config;
+        if (
+          error.response?.status === 401 &&
+          !originalRequest._retry &&
+          !originalRequest.url.includes("/api/auth/login") &&
+          !originalRequest.url.includes("/api/auth/refresh-token")
+        ) {
+          originalRequest._retry = true;
+          const isAuth = await checkAuthStatus();
+          if (!isAuth) {
+            logout();
+          }
+          return axios(originalRequest);
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => axios.interceptors.response.eject(interceptor);
+  }, [checkAuthStatus, logout]);
 
   return (
     <AuthContext.Provider
@@ -285,7 +184,6 @@ export const AuthProvider = ({ children }) => {
         error,
         login,
         logout,
-        checkAuthStatus,
         isAdmin: user?.role === "admin",
         isGuide: user?.role === "guide",
         isStudent: user?.role === "student",
