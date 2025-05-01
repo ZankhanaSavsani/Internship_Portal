@@ -69,30 +69,30 @@ app.use((err, req, res, next) => {
 });
 
 // ▼▼▼ Add the debugging middleware here ▼▼▼
-if (process.env.NODE_ENV === "development") {
-  app.use((req, res, next) => {
-    console.log("\n=== CORS Debug ===");
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    console.log("Origin:", req.headers.origin);
-    console.log("Headers:", req.headers);
+// if (process.env.NODE_ENV === "development") {
+//   app.use((req, res, next) => {
+//     console.log("\n=== CORS Debug ===");
+//     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+//     console.log("Origin:", req.headers.origin);
+//     console.log("Headers:", req.headers);
 
-    // Log CORS-related response headers
-    const corsHeaders = {
-      ACAO: res.getHeader("Access-Control-Allow-Origin"),
-      ACAC: res.getHeader("Access-Control-Allow-Credentials"),
-      ACAM: res.getHeader("Access-Control-Allow-Methods"),
-      ACAH: res.getHeader("Access-Control-Allow-Headers"),
-    };
-    console.log("CORS Response Headers:", corsHeaders);
+//     // Log CORS-related response headers
+//     const corsHeaders = {
+//       ACAO: res.getHeader("Access-Control-Allow-Origin"),
+//       ACAC: res.getHeader("Access-Control-Allow-Credentials"),
+//       ACAM: res.getHeader("Access-Control-Allow-Methods"),
+//       ACAH: res.getHeader("Access-Control-Allow-Headers"),
+//     };
+//     console.log("CORS Response Headers:", corsHeaders);
 
-    // Special handling for OPTIONS (preflight) requests
-    if (req.method === "OPTIONS") {
-      console.log("PREFLIGHT REQUEST DETECTED");
-    }
-    console.log("===\n");
-    next();
-  });
-}
+//     // Special handling for OPTIONS (preflight) requests
+//     if (req.method === "OPTIONS") {
+//       console.log("PREFLIGHT REQUEST DETECTED");
+//     }
+//     console.log("===\n");
+//     next();
+//   });
+// }
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

@@ -24,15 +24,15 @@ const ROLE_MODEL_MAP = {
  */
 const createCookieOptions = (maxAge) => {
   const isProduction = process.env.NODE_ENV === "production";
-  
+
   return {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? "none" : "lax",
     maxAge,
-    domain: isProduction ? 'internship-portal-37n9.vercel.app' : undefined,
-    path: '/',
-    partitioned: true // New for Chrome's cookie changes
+    domain: isProduction ? process.env.COOKIE_DOMAIN : undefined,
+    path: "/",
+    partitioned: true, // New for Chrome's cookie changes
   };
 };
 
@@ -111,7 +111,12 @@ exports.login = [
       const { role, username, password, studentId, semester } = req.body;
 
       // Input validation with detailed logging
-      if (!role || !password || (!username && !studentId) || (role === "student" && !semester)) {
+      if (
+        !role ||
+        !password ||
+        (!username && !studentId) ||
+        (role === "student" && !semester)
+      ) {
         const missingFields = ["role", "password"];
         if (!username && role !== "student") missingFields.push("username");
         if (!studentId && role === "student") missingFields.push("studentId");
@@ -138,9 +143,10 @@ exports.login = [
       }
 
       // Determine the login identifier based on role
-      const loginIdentifier = role.toLowerCase() === "student" 
-        ? { studentId, semester } 
-        : { username };
+      const loginIdentifier =
+        role.toLowerCase() === "student"
+          ? { studentId, semester }
+          : { username };
 
       // User authentication
       const user = await UserModel.findOne(loginIdentifier)
@@ -352,6 +358,25 @@ exports.refreshToken = [
   },
 ];
 
+const getCookieDomain = () => {
+  if (process.env.NODE_ENV !== "production") return undefined;
+
+  // For Render backend
+  if (process.env.BACKEND_URL.includes("onrender.com")) {
+    return ".onrender.com";
+  }
+
+  // Add other hosting providers as needed
+  return undefined;
+};
+
+// Then in clearAllAuthCookies:
+// const domain = getCookieDomain();
+// if (domain) {
+//   res.cookie(cookieName, "", { ...cookieOptions, domain });
+// }
+// res.cookie(cookieName, "", cookieOptions); // Always clear without domain too
+
 /**
  * @desc    Logout User
  * @route   POST /api/auth/logout
@@ -360,27 +385,73 @@ exports.refreshToken = [
 exports.logout = async (req, res) => {
   try {
     const { refreshToken } = req.cookies;
+    const isProduction = process.env.NODE_ENV === "production";
 
-    // If there's a refresh token, blacklist it
-    if (refreshToken) {
-      await TokenBlacklist.create({
-        token: refreshToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Match refresh token expiry
+    // Clear HTTP-only cookies with proper domain settings
+    const clearAllAuthCookies = () => {
+      const cookieOptions = {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax",
+        path: "/",
+        expires: new Date(0),
+        domain: isProduction ? getCookieDomain() : undefined,
+      };
+
+      const cookiesToClear = [
+        "accessToken",
+        "refreshToken",
+        "studentId",
+        "studentName",
+        "isAuthenticated",
+        "userId",
+        "user",
+      ];
+
+      cookiesToClear.forEach((cookieName) => {
+        // Clear with production domain
+        res.cookie(cookieName, "", cookieOptions);
+
+        // Additional clear for development/localhost
+        if (!isProduction) {
+          res.cookie(cookieName, "", {
+            ...cookieOptions,
+            domain: undefined,
+            sameSite: "lax",
+          });
+        }
       });
+    };
+
+    // Blacklist token if exists
+    if (refreshToken) {
+      try {
+        await TokenBlacklist.updateOne(
+          { token: refreshToken },
+          {
+            $setOnInsert: {
+              token: refreshToken,
+              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            },
+          },
+          { upsert: true }
+        );
+      } catch (error) {
+        if (error.code === 11000) {
+          logger.warn("[DUPLICATE TOKEN BLACKLIST ATTEMPT]", {
+            token: refreshToken.slice(-10) + "...",
+          });
+        }
+      }
     }
 
     // Clear all cookies
-    const cookieOptions = createCookieOptions(0);
-    res.cookie("accessToken", "", { ...cookieOptions, maxAge: 0 });
-    res.cookie("refreshToken", "", { ...cookieOptions, maxAge: 0 });
-    res.cookie("studentId", "", { ...cookieOptions, maxAge: 0 });
-    res.cookie("studentName", "", { ...cookieOptions, maxAge: 0 });
+    clearAllAuthCookies();
 
-    logger.info("[LOGOUT SUCCESS]", {
-      tokenBlacklisted: !!refreshToken,
-    });
+    // Additional security headers
+    res.set("Clear-Site-Data", '"cookies", "storage"');
 
-    return res.json({
+    return res.status(200).json({
       success: true,
       message: "Logged out successfully",
     });
@@ -389,7 +460,6 @@ exports.logout = async (req, res) => {
       error: error.message,
       stack: process.env.NODE_ENV !== "production" ? error.stack : undefined,
     });
-
     return res.status(500).json({
       success: false,
       message: "An error occurred during logout",
@@ -413,12 +483,10 @@ exports.getUserById = async (req, res) => {
     res.json({ success: true, user });
   } catch (error) {
     console.error("Error fetching user:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "An error occurred while fetching user data",
-      });
+    res.status(500).json({
+      success: false,
+      message: "An error occurred while fetching user data",
+    });
   }
 };
 
