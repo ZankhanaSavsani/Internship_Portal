@@ -33,7 +33,7 @@ const DownloadPage = () => {
       setError(null);
       
       const response = await axios({
-        url: `/api/download/${selectedModel}?startDate=${startDate}&endDate=${endDate}`,
+        url: `${process.env.REACT_APP_BACKEND_BASEURL}/api/download/${selectedModel}?startDate=${startDate}&endDate=${endDate}`,
         method: 'GET',
         responseType: 'blob',
         headers: {

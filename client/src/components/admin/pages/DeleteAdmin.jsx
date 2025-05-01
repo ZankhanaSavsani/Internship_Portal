@@ -37,12 +37,12 @@ const DeleteAdmin = () => {
       // Determine API endpoint and method based on action
       const apiConfig = action === 'delete'
         ? {
-            url: `/api/admin/${adminId}`,
+            url: `${process.env.REACT_APP_BACKEND_BASEURL}/api/admin/${adminId}`,
             method: 'delete',
             successMessage: 'Admin soft deleted successfully'
           }
         : {
-            url: `/api/admin/restore/${adminId}`,
+            url: `${process.env.REACT_APP_BACKEND_BASEURL}/api/admin/restore/${adminId}`,
             method: 'patch',
             successMessage: 'Admin restored successfully'
           };

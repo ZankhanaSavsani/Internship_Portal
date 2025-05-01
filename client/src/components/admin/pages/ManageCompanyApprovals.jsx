@@ -85,7 +85,7 @@ const ManageCompanyApprovals = () => {
       }
 
       const response = await axios.get(
-        `/api/company-approvals?${params.toString()}`
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/company-approvals?${params.toString()}`
       );
       setApprovals(response.data.data);
       setTotalPages(response.data.pages);
@@ -128,7 +128,7 @@ const ManageCompanyApprovals = () => {
       setActionLoading(true);
       setError(null);
 
-      await axios.delete(`/api/company-approvals/${id}`);
+      await axios.delete(`${process.env.REACT_APP_BACKEND_BASEURL}/api/company-approvals/${id}`);
 
       // Optimistically update the UI
       setApprovals((prevApprovals) =>
@@ -159,7 +159,7 @@ const ManageCompanyApprovals = () => {
       setActionLoading(true);
       setError(null);
 
-      await axios.patch(`/api/company-approvals/${id}/restore`);
+      await axios.patch(`${process.env.REACT_APP_BACKEND_BASEURL}//company-approvals/${id}/restore`);
 
       // Optimistically update the UI
       setApprovals((prevApprovals) =>
@@ -234,7 +234,7 @@ const ManageCompanyApprovals = () => {
       }
 
       const response = await axios.patch(
-        `/api/company-approvals/${id}`,
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/company-approvals/${id}`,
         updateData
       );
 

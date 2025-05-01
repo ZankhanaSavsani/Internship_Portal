@@ -37,7 +37,7 @@ const StudentProfile = () => {
   useEffect(() => {
     const fetchStudentProfile = async () => {
       try {
-        const response = await axios.get(`/api/students/${user._id}`, {
+        const response = await axios.get(`${process.env.REACT_APP_BACKEND_BASEURL}/api/students/${user._id}`, {
           withCredentials: true,
         });
         setUserData(response.data.data);
@@ -88,7 +88,7 @@ const StudentProfile = () => {
 
     try {
       const response = await axios.patch(
-        `/api/students/change-password/${user._id}`,
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/students/change-password/${user._id}`,
         {
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword,

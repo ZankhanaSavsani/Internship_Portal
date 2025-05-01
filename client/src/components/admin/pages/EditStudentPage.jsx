@@ -49,7 +49,7 @@ const StudentManagementPage = () => {
     setLoading(true);
     
     try {
-      const response = await axios.post('/api/students/fetch-student', 
+      const response = await axios.post(`${process.env.REACT_APP_BACKEND_BASEURL}/api/students/fetch-student`, 
         {}, // Empty body since we're passing data in query params
         {
           params: { studentId, semester },
@@ -123,7 +123,7 @@ const StudentManagementPage = () => {
         delete payload.newPassword;
       }
       
-      const response = await axios.put(`/api/students/${student._id}`, payload, {
+      const response = await axios.put(`${process.env.REACT_APP_BACKEND_BASEURL}/api/students/${student._id}`, payload, {
         withCredentials: true,
         headers: {
           Authorization: `Bearer ${user.token}`,
@@ -175,7 +175,7 @@ const StudentManagementPage = () => {
 
     try {
       const response = await axios.patch(
-        `/api/students/restore/${student._id}`,
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/students/restore/${student._id}`,
         {},
         {
           withCredentials: true,

@@ -53,7 +53,7 @@ const StudentInternshipDetails = () => {
   // Memoize fetchGuides using useCallback
   const fetchGuides = useCallback(async () => {
     try {
-      const response = await axios.get("/api/guide", {
+      const response = await axios.get(`${process.env.REACT_APP_BACKEND_BASEURL}/api/guide`, {
         withCredentials: true,
         headers: {
           Authorization: `Bearer ${user.token}`,
@@ -106,7 +106,7 @@ const StudentInternshipDetails = () => {
 
     try {
       const response = await axios.get(
-        `/api/studentInternship/student/${studentId}?semester=${semester}`,
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/studentInternship/student/${studentId}?semester=${semester}`,
         {
           withCredentials: true,
           headers: {
@@ -155,7 +155,7 @@ const StudentInternshipDetails = () => {
 
     try {
       const response = await axios.put(
-        `/api/studentInternship/${internshipData._id}/update-guide`,
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/studentInternship/${internshipData._id}/update-guide`,
         { guideId: selectedGuideId },
         {
           withCredentials: true,

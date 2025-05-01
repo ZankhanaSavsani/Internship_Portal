@@ -79,7 +79,7 @@ const ManageWeeklyReports = () => {
       }
 
       const response = await axios.get(
-        `/api/weeklyReport?${params.toString()}`
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/weeklyReport?${params.toString()}`
       );
       setReports(response.data.data);
       setTotalPages(response.data.pages);
@@ -116,7 +116,7 @@ const ManageWeeklyReports = () => {
         return;
       }
 
-      await axios.patch(`/api/weeklyReport/${reportForMarks._id}/marks`, {
+      await axios.patch(`${process.env.REACT_APP_BACKEND_BASEURL}/api/weeklyReport/${reportForMarks._id}/marks`, {
         marks: marksValue,
       });
 
@@ -234,7 +234,7 @@ const ManageWeeklyReports = () => {
       setActionLoading(true);
       setError(null);
 
-      await axios.delete(`/api/weeklyReport/${id}`);
+      await axios.delete(`${process.env.REACT_APP_BACKEND_BASEURL}/api/weeklyReport/${id}`);
 
       // Optimistically update the UI
       setReports((prevReports) =>
@@ -265,7 +265,7 @@ const ManageWeeklyReports = () => {
       setActionLoading(true);
       setError(null);
 
-      await axios.patch(`/api/weeklyReport/${id}/restore`);
+      await axios.patch(`${process.env.REACT_APP_BACKEND_BASEURL}/api/weeklyReport/${id}/restore`);
 
       // Optimistically update the UI
       setReports((prevReports) =>
@@ -303,7 +303,7 @@ const ManageWeeklyReports = () => {
       console.log("Updating report with ID:", id);
 
       const response = await axios.patch(
-        `/api/weeklyReport/${id}/approval`,
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/weeklyReport/${id}/approval`,
         updateData
       );
 

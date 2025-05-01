@@ -20,7 +20,7 @@ const OnboardingPage = () => {
 
     try {
       const response = await axios.patch(
-        `/api/students/${user._id}`,
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/students/${user._id}`,
         { studentName: fullName, isOnboarded: true },
         { withCredentials: true }
       );

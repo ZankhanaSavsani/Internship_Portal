@@ -42,7 +42,7 @@ const AdminApprovalPage = () => {
   useEffect(() => {
     const fetchApprovalRequests = async () => {
       try {
-        const response = await fetch("/api/admin/company-approvals");
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_BASEURL}/api/admin/company-approvals`);
         const data = await response.json();
         setApprovalRequests(data);
         setFilteredRequests(data);
@@ -80,7 +80,7 @@ const AdminApprovalPage = () => {
 
   const handleApproval = async (id, status, reason = "") => {
     try {
-      const response = await fetch(`/api/admin/company-approvals/${id}`, {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_BASEURL}/api/admin/company-approvals/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

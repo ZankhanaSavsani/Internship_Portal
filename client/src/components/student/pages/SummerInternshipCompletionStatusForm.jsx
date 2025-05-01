@@ -406,7 +406,7 @@ const SummerInternshipCompletionForm = () => {
 
         // Send the request
         const response = await axios.post(
-          "http://localhost:5000/api/summer-internship-completion",
+          `${process.env.REACT_APP_BACKEND_BASEURL}/api/summer-internship-completion`,
           submissionData,
           {
             withCredentials: true,

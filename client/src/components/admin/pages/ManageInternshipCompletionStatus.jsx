@@ -61,7 +61,7 @@ const ManageInternshipCompletionStatus = () => {
       }
 
       const response = await axios.get(
-        `/api/summer-internship-completion?${params.toString()}`
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/summer-internship-completion?${params.toString()}`
       );
       setInternships(response.data.data);
       setTotalPages(response.data.pages);
@@ -104,7 +104,7 @@ const ManageInternshipCompletionStatus = () => {
       setError(null);
 
       const response = await axios.patch(
-        `/api/summer-internship-completion/${id}/restore`
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/summer-internship-completion/${id}/restore`
       );
 
       setInternships((prevInternships) =>
@@ -141,7 +141,7 @@ const ManageInternshipCompletionStatus = () => {
       setActionLoading(true);
       setError(null);
 
-      await axios.delete(`/api/summer-internship-completion/${id}`);
+      await axios.delete(`${process.env.REACT_APP_BACKEND_BASEURL}/api/summer-internship-completion/${id}`);
 
       setInternships((prevInternships) =>
         prevInternships.filter((internship) => internship._id !== id)

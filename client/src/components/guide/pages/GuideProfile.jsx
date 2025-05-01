@@ -86,7 +86,7 @@ const GuideProfile = () => {
 
     try {
       await axios.patch(
-        `/api/guides/change-password/${user._id}`,
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/guides/change-password/${user._id}`,
         {
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword,

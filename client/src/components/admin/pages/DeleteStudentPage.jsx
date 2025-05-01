@@ -59,7 +59,7 @@ const DeleteStudentPage = () => {
     
     try {
       // Using POST method to match the backend route configuration
-      const response = await axios.post('/api/students/fetch-student', 
+      const response = await axios.post(`${process.env.REACT_APP_BACKEND_BASEURL}/api/students/fetch-student`, 
         {}, // Empty body since we're passing data in query params
         {
           params: { studentId, semester },
@@ -113,7 +113,7 @@ const DeleteStudentPage = () => {
     setIsSubmitting(true);
     
     try {
-      const response = await axios.delete(`/api/students/${student._id}`, {
+      const response = await axios.delete(`${process.env.REACT_APP_BACKEND_BASEURL}/api/students/${student._id}`, {
         withCredentials: true,
         headers: {
           Authorization: `Bearer ${user.token}`,

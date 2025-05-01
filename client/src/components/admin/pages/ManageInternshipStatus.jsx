@@ -66,7 +66,7 @@ const ManageInternshipStatus = () => {
       }
 
       const response = await axios.get(
-        `/api/summer-internship-status?${params.toString()}`
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/summer-internship-status?${params.toString()}`
       );
       setInternships(response.data.data);
       setTotalPages(response.data.pages);
@@ -110,7 +110,7 @@ const ManageInternshipStatus = () => {
       setError(null);
 
       const response = await axios.patch(
-        `/api/summer-internship-status/${id}/restore`
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/summer-internship-status/${id}/restore`
       );
 
       // Optimistically update the UI
@@ -151,7 +151,7 @@ const ManageInternshipStatus = () => {
       setActionLoading(true);
       setError(null);
 
-      await axios.delete(`/api/summer-internship-status/${id}`);
+      await axios.delete(`${process.env.REACT_APP_BACKEND_BASEURL}/api/summer-internship-status/${id}`);
 
       // Optimistically update the UI
       setInternships((prevInternships) =>

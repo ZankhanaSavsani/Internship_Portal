@@ -197,7 +197,7 @@ const WeeklyReportForm = () => {
 
         console.log("Submission Data:", submissionData);
 
-        const response = await axios.post("/api/weeklyReport", submissionData, {
+        const response = await axios.post(`${process.env.REACT_APP_BACKEND_BASEURL}/api/weeklyReport`, submissionData, {
           withCredentials: true,
         });
 

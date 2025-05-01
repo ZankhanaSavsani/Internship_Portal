@@ -79,7 +79,7 @@ const AnnouncementForm = () => {
     try {
       if (formData.targetType === "students") {
         await axios.post(
-          "/api/notifications/notify-students",
+          `${process.env.REACT_APP_BACKEND_BASEURL}/api/notifications/notify-students`,
           {
             title: formData.title,
             message: formData.message,
@@ -94,7 +94,7 @@ const AnnouncementForm = () => {
         );
       } else {
         await axios.post(
-          "/api/notifications/notify-guides",
+          `${process.env.REACT_APP_BACKEND_BASEURL}/api/notifications/notify-guides`,
           {
             title: formData.title,
             message: formData.message,

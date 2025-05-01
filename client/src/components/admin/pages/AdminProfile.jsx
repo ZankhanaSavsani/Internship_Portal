@@ -35,7 +35,7 @@ const AdminProfile = () => {
   useEffect(() => {
     const fetchAdminProfile = async () => {
       try {
-        const response = await axios.get(`/api/admin/${user._id}`, {
+        const response = await axios.get(`${process.env.REACT_APP_BACKEND_BASEURL}/api/admin/${user._id}`, {
           withCredentials: true,
         });
         setAdminData(response.data.data);
@@ -86,7 +86,7 @@ const AdminProfile = () => {
 
     try {
       const response = await axios.patch(
-        `/api/admin/change-password/${user._id}`,
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/admin/change-password/${user._id}`,
         {
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword,
