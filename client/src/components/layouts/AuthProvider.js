@@ -79,43 +79,71 @@ export const AuthProvider = ({ children }) => {
   }, [logout]);
 
   useEffect(() => {
-    checkAuthStatus();
-
+    const checkAuthAndRedirect = async () => {
+      try {
+        const response = await axios.get(
+          `${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/me`,
+          { withCredentials: true }
+        );
+        
+        if (response.data.success) {
+          setUser(response.data.user);
+          setIsAuthenticated(true);
+          
+          // Only navigate if we're not already on the correct path
+          const currentPath = window.location.pathname;
+          const targetPath = response.data.user.role === 'student' && 
+                            (!response.data.user.studentName || !response.data.user.isOnboarded)
+                            ? '/student/onboarding'
+                            : `/${response.data.user.role}`;
+          
+          if (!currentPath.startsWith(targetPath)) {
+            navigate(targetPath, { replace: true });
+          }
+        } else {
+          await logout();
+        }
+      } catch (err) {
+        if (err.response?.status === 401) {
+          await logout();
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    checkAuthAndRedirect();
+  
     const tokenRefreshInterval = setInterval(() => {
       refreshToken().then((success) => {
         if (!success) logout();
       });
     }, 14 * 60 * 1000); // Refresh every 14 minutes
-
+  
     return () => clearInterval(tokenRefreshInterval);
-  }, [checkAuthStatus, logout, refreshToken]);
+  }, [navigate, logout, refreshToken]);
 
   // Login function
   const login = async (credentials) => {
     try {
       setLoading(true);
-      const response = await axios.post('/api/auth/login', credentials, {
-        withCredentials: true
-      });
-      
+      const response = await axios.post(
+        `${process.env.REACT_APP_BACKEND_BASEURL}/api/auth/login`,
+        credentials,
+        { withCredentials: true }
+      );
+
       if (response.data.success) {
         setUser(response.data.user);
         setIsAuthenticated(true);
-        
-        // Check if student needs onboarding
-        if (response.data.user.role === 'student' && !response.data.user.isOnboarded) {
-          navigate('/onboarding');
-        } else {
-          navigate(`/${response.data.user.role}`);
-        }
-        
-        return { success: true };
+        // Remove the navigate calls here - let the useEffect handle redirection
+        return { success: true, user: response.data.user };
       }
       return { success: false, message: response.data.message };
     } catch (error) {
-      return { 
-        success: false, 
-        message: error.response?.data?.message || "Login failed" 
+      return {
+        success: false,
+        message: error.response?.data?.message || "Login failed",
       };
     } finally {
       setLoading(false);
