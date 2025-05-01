@@ -1,18 +1,20 @@
-const jwt = require('jsonwebtoken');
-const logger = require('../utils/logger');
-const generateToken = require('../utils/tokenUtils');
-const { redactSensitiveData } = require('../utils/security');
-const TokenBlacklist = require('../models/TokenBlacklist');
-const Admin = require('../models/AdminModel');
-const Guide = require('../models/GuideModel');
-const Student = require('../models/StudentModel');
-const { loginLimiter, refreshLimiter } = require('../middleware/authMiddleware');
-
+const jwt = require("jsonwebtoken");
+const logger = require("../utils/logger");
+const generateToken = require("../utils/tokenUtils");
+const { redactSensitiveData } = require("../utils/security");
+const TokenBlacklist = require("../models/TokenBlacklist");
+const Admin = require("../models/AdminModel");
+const Guide = require("../models/GuideModel");
+const Student = require("../models/StudentModel");
+const {
+  loginLimiter,
+  refreshLimiter,
+} = require("../middleware/authMiddleware");
 
 const ROLE_MODEL_MAP = {
   admin: Admin,
   guide: Guide,
-  student: Student
+  student: Student,
 };
 
 /**
@@ -21,17 +23,15 @@ const ROLE_MODEL_MAP = {
  * @returns {Object} Cookie configuration object
  */
 const createCookieOptions = (maxAge) => {
-  // Validate domain configuration
-  if (!process.env.COOKIE_DOMAIN) {
-    logger.warn('[COOKIE CONFIG] No domain configured for cookies');
-  }
+  const isProduction = process.env.NODE_ENV === "production";
 
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax", // Critical change for production
     maxAge,
-    domain: process.env.COOKIE_DOMAIN || undefined
+    domain: isProduction ? ".vercel.app" : undefined, // Adjust if using custom domain
+    path: "/",
   };
 };
 
@@ -61,11 +61,11 @@ const setAuthCookies = (res, accessToken, refreshToken) => {
   res.cookie("accessToken", accessToken, cookieOptions);
   res.cookie("refreshToken", refreshToken, refreshCookieOptions);
 
-  if (process.env.NODE_ENV !== 'production') {
-    logger.debug('[COOKIES SET]', {
+  if (process.env.NODE_ENV !== "production") {
+    logger.debug("[COOKIES SET]", {
       accessTokenExpiry: new Date(Date.now() + ACCESS_TOKEN_AGE),
       refreshTokenExpiry: new Date(Date.now() + REFRESH_TOKEN_AGE),
-      cookieConfig: redactSensitiveData({ ...cookieOptions }, ['domain'])
+      cookieConfig: redactSensitiveData({ ...cookieOptions }, ["domain"]),
     });
   }
 };
@@ -82,12 +82,12 @@ const setRoleSpecificCookies = (res, user, role) => {
       if (user._id && user.studentName) {
         res.cookie("userId", user._id, options); // Set userId cookie
         res.cookie("studentName", user.studentName, options);
-        logger.debug('[STUDENT COOKIES SET]', {
+        logger.debug("[STUDENT COOKIES SET]", {
           hasUserId: !!user._id,
-          hasStudentName: !!user.studentName
+          hasStudentName: !!user.studentName,
         });
       }
-    }
+    },
     // Add other role handlers here as needed
   };
 
@@ -105,55 +105,64 @@ const setRoleSpecificCookies = (res, user, role) => {
 exports.login = [
   loginLimiter,
   async (req, res) => {
-    const startTime = process.env.NODE_ENV !== 'production' ? Date.now() : null;
+    const startTime = process.env.NODE_ENV !== "production" ? Date.now() : null;
     try {
       const { role, username, password, studentId, semester } = req.body;
 
       // Input validation with detailed logging
-      if (!role || !password || (!username && !studentId) || (role === 'student' && !semester)) {
-        const missingFields = ['role', 'password'];
-        if (!username && role !== 'student') missingFields.push('username');
-        if (!studentId && role === 'student') missingFields.push('studentId');
-        if (role === 'student' && !semester) missingFields.push('semester');
+      if (
+        !role ||
+        !password ||
+        (!username && !studentId) ||
+        (role === "student" && !semester)
+      ) {
+        const missingFields = ["role", "password"];
+        if (!username && role !== "student") missingFields.push("username");
+        if (!studentId && role === "student") missingFields.push("studentId");
+        if (role === "student" && !semester) missingFields.push("semester");
 
-        logger.warn('[LOGIN ATTEMPT] Missing fields', { missingFields });
+        logger.warn("[LOGIN ATTEMPT] Missing fields", { missingFields });
         return res.status(400).json({
           success: false,
-          message: "All fields are required"
+          message: "All fields are required",
         });
       }
 
       // Role validation
       const UserModel = ROLE_MODEL_MAP[role.toLowerCase()];
       if (!UserModel) {
-        logger.warn('[LOGIN ATTEMPT] Invalid role', {
+        logger.warn("[LOGIN ATTEMPT] Invalid role", {
           attemptedRole: role,
-          validRoles: Object.keys(ROLE_MODEL_MAP)
+          validRoles: Object.keys(ROLE_MODEL_MAP),
         });
         return res.status(400).json({
           success: false,
-          message: "Invalid role selected"
+          message: "Invalid role selected",
         });
       }
 
       // Determine the login identifier based on role
-      const loginIdentifier = role.toLowerCase() === 'student' ? { studentId, semester } : { username };
+      const loginIdentifier =
+        role.toLowerCase() === "student"
+          ? { studentId, semester }
+          : { username };
 
       // User authentication
       const user = await UserModel.findOne(loginIdentifier)
-        .select('+password')
+        .select("+password")
         .exec();
 
       if (!user || !(await user.comparePassword(password))) {
-        logger.warn('[LOGIN FAILED]', {
-          [role.toLowerCase() === 'student' ? 'studentId' : 'username']: role.toLowerCase() === 'student' ? studentId : username,
+        logger.warn("[LOGIN FAILED]", {
+          [role.toLowerCase() === "student" ? "studentId" : "username"]:
+            role.toLowerCase() === "student" ? studentId : username,
           role,
-          semester: role.toLowerCase() === 'student' ? semester : undefined,
-          reason: !user ? 'User not found' : 'Invalid password'
+          semester: role.toLowerCase() === "student" ? semester : undefined,
+          reason: !user ? "User not found" : "Invalid password",
         });
         return res.status(401).json({
           success: false,
-          message: "Invalid credentials"
+          message: "Invalid credentials",
         });
       }
 
@@ -173,10 +182,10 @@ exports.login = [
       const logData = {
         userId: user._id,
         role,
-        loginTime: new Date()
+        loginTime: new Date(),
       };
 
-      if (role.toLowerCase() === 'student') {
+      if (role.toLowerCase() === "student") {
         logData.studentId = user.studentId;
         logData.semester = user.semester;
       } else {
@@ -187,43 +196,55 @@ exports.login = [
         logData.processDuration = Date.now() - startTime;
       }
 
-      logger.info('[LOGIN SUCCESS]', logData);
+      logger.info("[LOGIN SUCCESS]", logData);
 
-      return res.json({
-        success: true,
-        message: "Login successful",
-        user: {
-          id: user._id, // Include _id in the response
-          role: user.role,
-          [role.toLowerCase() === 'student' ? 'studentId' : 'username']: role.toLowerCase() === 'student' ? user.studentId : user.username,
-          semester: role.toLowerCase() === 'student' ? user.semester : undefined,
-          lastLogin: user.lastLogin
-        },
-        tokens: {
+      return res
+        .status(200)
+        .cookie(
+          "accessToken",
           accessToken,
-          refreshToken
-        }
-      });
-
+          createCookieOptions(24 * 60 * 60 * 1000)
+        )
+        .cookie(
+          "refreshToken",
+          refreshToken,
+          createCookieOptions(7 * 24 * 60 * 60 * 1000)
+        )
+        .json({
+          success: true,
+          message: "Login successful",
+          user: {
+            id: user._id,
+            role: user.role,
+            [role.toLowerCase() === "student" ? "studentId" : "username"]:
+              role.toLowerCase() === "student" ? user.studentId : user.username,
+            semester:
+              role.toLowerCase() === "student" ? user.semester : undefined,
+          },
+          tokens: {
+            accessToken,
+            refreshToken,
+          },
+        });
     } catch (error) {
       const errorLog = {
         error: error.message,
-        stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
-        requestBody: redactSensitiveData({ ...req.body }, ['password'])
+        stack: process.env.NODE_ENV !== "production" ? error.stack : undefined,
+        requestBody: redactSensitiveData({ ...req.body }, ["password"]),
       };
 
       if (startTime) {
         errorLog.processDuration = Date.now() - startTime;
       }
 
-      logger.error('[LOGIN ERROR]', errorLog);
+      logger.error("[LOGIN ERROR]", errorLog);
 
       return res.status(500).json({
         success: false,
-        message: "An error occurred during login"
+        message: "An error occurred during login",
       });
     }
-  }
+  },
 ];
 
 /**
@@ -234,53 +255,53 @@ exports.login = [
 exports.refreshToken = [
   refreshLimiter,
   async (req, res) => {
-    const startTime = process.env.NODE_ENV !== 'production' ? Date.now() : null;
+    const startTime = process.env.NODE_ENV !== "production" ? Date.now() : null;
     try {
       const { refreshToken } = req.cookies;
 
       if (!refreshToken) {
-        logger.warn('[REFRESH TOKEN] Missing token', {
-          availableCookies: Object.keys(req.cookies)
+        logger.warn("[REFRESH TOKEN] Missing token", {
+          availableCookies: Object.keys(req.cookies),
         });
         return res.status(401).json({
           success: false,
-          message: "Refresh token is required"
+          message: "Refresh token is required",
         });
       }
 
       // Check if token is blacklisted
       if (await isTokenBlacklisted(refreshToken)) {
-        logger.warn('[REFRESH TOKEN] Attempted use of blacklisted token');
+        logger.warn("[REFRESH TOKEN] Attempted use of blacklisted token");
         return res.status(401).json({
           success: false,
-          message: "Token has been revoked"
+          message: "Token has been revoked",
         });
       }
 
       // Verify token
       const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
-      
+
       // Validate token type
       if (decoded.type !== "refresh") {
-        logger.warn('[REFRESH TOKEN] Invalid token type', {
-          expectedType: 'refresh',
-          receivedType: decoded.type
+        logger.warn("[REFRESH TOKEN] Invalid token type", {
+          expectedType: "refresh",
+          receivedType: decoded.type,
         });
         return res.status(403).json({
           success: false,
-          message: "Invalid token type"
+          message: "Invalid token type",
         });
       }
 
       // Check token expiration
       if (decoded.exp && decoded.exp < Date.now() / 1000) {
-        logger.warn('[REFRESH TOKEN] Expired token', {
+        logger.warn("[REFRESH TOKEN] Expired token", {
           expiry: new Date(decoded.exp * 1000),
-          currentTime: new Date()
+          currentTime: new Date(),
         });
         return res.status(401).json({
           success: false,
-          message: "Refresh token has expired"
+          message: "Refresh token has expired",
         });
       }
 
@@ -289,13 +310,13 @@ exports.refreshToken = [
       const user = await UserModel.findById(decoded.id);
 
       if (!user) {
-        logger.warn('[REFRESH TOKEN] User not found', {
+        logger.warn("[REFRESH TOKEN] User not found", {
           userId: decoded.id,
-          role: decoded.role
+          role: decoded.role,
         });
         return res.status(401).json({
           success: false,
-          message: "User not found"
+          message: "User not found",
         });
       }
 
@@ -303,48 +324,51 @@ exports.refreshToken = [
       const newAccessToken = generateToken(user);
 
       // Set new access token cookie
-      res.cookie("accessToken", newAccessToken, createCookieOptions(24 * 60 * 60 * 1000));
+      res.cookie(
+        "accessToken",
+        newAccessToken,
+        createCookieOptions(24 * 60 * 60 * 1000)
+      );
 
       // Log success (with performance metrics in non-production)
       const logData = {
         userId: user._id,
         username: user.username,
-        role: user.role
+        role: user.role,
       };
 
       if (startTime) {
         logData.processDuration = Date.now() - startTime;
       }
 
-      logger.info('[TOKEN REFRESHED]', logData);
+      logger.info("[TOKEN REFRESHED]", logData);
 
       return res.json({
         success: true,
-        message: "Token refreshed successfully"
+        message: "Token refreshed successfully",
       });
-
     } catch (error) {
       const errorLog = {
         error: error.message,
-        stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+        stack: process.env.NODE_ENV !== "production" ? error.stack : undefined,
         cookies: {
           hasRefreshToken: !!req.cookies.refreshToken,
-          hasAccessToken: !!req.cookies.accessToken
-        }
+          hasAccessToken: !!req.cookies.accessToken,
+        },
       };
 
       if (startTime) {
         errorLog.processDuration = Date.now() - startTime;
       }
 
-      logger.error('[REFRESH TOKEN ERROR]', errorLog);
-      
+      logger.error("[REFRESH TOKEN ERROR]", errorLog);
+
       return res.status(401).json({
         success: false,
-        message: "Invalid refresh token"
+        message: "Invalid refresh token",
       });
     }
-  }
+  },
 ];
 
 /**
@@ -360,34 +384,34 @@ exports.logout = async (req, res) => {
     if (refreshToken) {
       await TokenBlacklist.create({
         token: refreshToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // Match refresh token expiry
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Match refresh token expiry
       });
     }
 
     // Clear all cookies
     const cookieOptions = createCookieOptions(0);
-    res.cookie('accessToken', '', { ...cookieOptions, maxAge: 0 });
-    res.cookie('refreshToken', '', { ...cookieOptions, maxAge: 0 });
-    res.cookie('studentId', '', { ...cookieOptions, maxAge: 0 });
-    res.cookie('studentName', '', { ...cookieOptions, maxAge: 0 });
+    res.cookie("accessToken", "", { ...cookieOptions, maxAge: 0 });
+    res.cookie("refreshToken", "", { ...cookieOptions, maxAge: 0 });
+    res.cookie("studentId", "", { ...cookieOptions, maxAge: 0 });
+    res.cookie("studentName", "", { ...cookieOptions, maxAge: 0 });
 
-    logger.info('[LOGOUT SUCCESS]', {
-      tokenBlacklisted: !!refreshToken
+    logger.info("[LOGOUT SUCCESS]", {
+      tokenBlacklisted: !!refreshToken,
     });
 
     return res.json({
       success: true,
-      message: "Logged out successfully"
+      message: "Logged out successfully",
     });
   } catch (error) {
-    logger.error('[LOGOUT ERROR]', {
+    logger.error("[LOGOUT ERROR]", {
       error: error.message,
-      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+      stack: process.env.NODE_ENV !== "production" ? error.stack : undefined,
     });
 
     return res.status(500).json({
       success: false,
-      message: "An error occurred during logout"
+      message: "An error occurred during logout",
     });
   }
 };
@@ -400,13 +424,20 @@ exports.getUserById = async (req, res) => {
     // Find user by _id
     const user = await UserModel.findById(id);
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     res.json({ success: true, user });
   } catch (error) {
     console.error("Error fetching user:", error);
-    res.status(500).json({ success: false, message: "An error occurred while fetching user data" });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "An error occurred while fetching user data",
+      });
   }
 };
 
@@ -425,29 +456,28 @@ exports.getMe = async (req, res) => {
     if (!UserModel) {
       return res.status(400).json({
         success: false,
-        message: "Invalid user role"
+        message: "Invalid user role",
       });
     }
 
     // Fetch user details (excluding password)
-    const user = await UserModel.findById(userId).select('-password');
+    const user = await UserModel.findById(userId).select("-password");
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found"
+        message: "User not found",
       });
     }
 
     return res.json({
       success: true,
-      user
+      user,
     });
-
   } catch (error) {
-    logger.error('[GET ME ERROR]', { error: error.message });
+    logger.error("[GET ME ERROR]", { error: error.message });
     return res.status(500).json({
       success: false,
-      message: "An error occurred while fetching user details"
+      message: "An error occurred while fetching user details",
     });
   }
 };

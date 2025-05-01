@@ -16,7 +16,6 @@ const allowedOrigins = [
   'https://internship-portal-37n9.vercel.app'
 ];
 
-// Enhanced CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -26,8 +25,9 @@ const corsOptions = {
     }
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'], // Added Cookie here
+  credentials: true,
+  exposedHeaders: ['Set-Cookie'] // Important for cookies to be accessible
 };
 
 // Apply CORS middleware
@@ -50,6 +50,12 @@ app.set('trust proxy', true);
 
 
 app.use(cookieParser()); //  Parse cookies
+
+app.use((req, res, next) => {
+  console.log('Incoming cookies:', req.cookies);
+  console.log('Request origin:', req.headers.origin);
+  next();
+});
 
 // Import Routes
 const authRoutes = require("./routes/authRoutes");
