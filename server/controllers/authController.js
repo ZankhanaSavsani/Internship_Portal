@@ -24,14 +24,15 @@ const ROLE_MODEL_MAP = {
  */
 const createCookieOptions = (maxAge) => {
   const isProduction = process.env.NODE_ENV === "production";
-
+  
   return {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? "none" : "lax", // Critical change for production
+    sameSite: isProduction ? "none" : "lax",
     maxAge,
-    domain: isProduction ? ".vercel.app" : undefined, // Adjust if using custom domain
-    path: "/",
+    domain: isProduction ? 'internship-portal-37n9.vercel.app' : undefined,
+    path: '/',
+    partitioned: true // New for Chrome's cookie changes
   };
 };
 
@@ -200,16 +201,6 @@ exports.login = [
 
       return res
         .status(200)
-        .cookie(
-          "accessToken",
-          accessToken,
-          createCookieOptions(24 * 60 * 60 * 1000)
-        )
-        .cookie(
-          "refreshToken",
-          refreshToken,
-          createCookieOptions(7 * 24 * 60 * 60 * 1000)
-        )
         .json({
           success: true,
           message: "Login successful",

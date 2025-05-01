@@ -4,14 +4,12 @@ import { useAuth } from "../layouts/AuthProvider";
 import {
   Eye,
   EyeOff,
-  Briefcase,
   GraduationCap,
   UserCog,
   Users,
   Loader2,
   CheckCircle,
 } from "lucide-react";
-import axios from "axios";
 
 const InternshipLoginForm = () => {
   const { login, isAuthenticated, user, loading: authLoading } = useAuth();
@@ -22,7 +20,7 @@ const InternshipLoginForm = () => {
   const [formData, setFormData] = useState({
     username: "",
     password: "",
-    semester: "", // Add semester field
+    semester: "",
   });
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,17 +29,14 @@ const InternshipLoginForm = () => {
 
   useEffect(() => {
     if (isAuthenticated && user?.role) {
-      // Check if the student has provided their name and completed onboarding
       if (user.role === "student" && (!user.studentName || !user.isOnboarded)) {
-        // Redirect to the onboarding page
         navigate("/student", { replace: true });
       } else {
-        // Redirect based on role
         const redirectPath = location.state?.from || `/${user.role}`;
         navigate(redirectPath, { replace: true });
       }
     }
-  }, [isAuthenticated, user, navigate, location]);
+  }, [isAuthenticated, user, navigate, location.state?.from]);
 
   const getUserMessage = () => {
     switch (selectedTab) {
@@ -73,62 +68,50 @@ const InternshipLoginForm = () => {
     e.preventDefault();
     setError("");
     setIsSubmitting(true);
+    setSubmitStatus(null);
+    setSubmitMessage("");
 
-    // Validate form fields
     if (!formData.username.trim() || !formData.password.trim()) {
       setError("All fields are required.");
       setIsSubmitting(false);
       return;
     }
 
-    // Additional validation for students
     if (selectedTab === "student" && !formData.semester) {
       setError("Semester is required for students.");
       setIsSubmitting(false);
       return;
     }
 
-    // Prepare the payload based on the selected tab
     const payload = {
       role: selectedTab,
       password: formData.password,
     };
 
-    // Add username or studentId based on the selected role
     if (selectedTab === "student") {
       payload.studentId = formData.username;
-      payload.semester = formData.semester; // Include semester for students
+      payload.semester = formData.semester;
     } else {
       payload.username = formData.username;
     }
 
     try {
-      // First try to login using the auth context
-      await login(payload);
-
-      // If successful, make the API call
-      const response = await axios.post("/api/auth/login", payload, {
-        withCredentials: true,
-      });
-
-      console.log("Form submission successful:", response.data);
-      setSubmitStatus("success");
-      setSubmitMessage(response.data.message || "Form submitted successfully!");
-
-      setFormData({
-        username: "",
-        password: "",
-        semester: "", // Reset semester field
-      });
+      const result = await login(payload);
+      
+      if (result.success) {
+        setSubmitStatus("success");
+        setSubmitMessage("Login successful!");
+        setFormData({
+          username: "",
+          password: "",
+          semester: "",
+        });
+      } else {
+        setError(result.message || "Authentication failed");
+      }
     } catch (error) {
       console.error("Error during login:", error);
-      // Extract error message from the response
-      if (error.response && error.response.data) {
-        // Get the message from the API response
-        setError(error.response.data.message || "Authentication failed");
-      } else {
-        setError("An unexpected error occurred. Please try again.");
-      }
+      setError(error.message || "An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -139,11 +122,10 @@ const InternshipLoginForm = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
-    // Clear error when user types
     if (error) setError("");
   };
 
-  if (authLoading) {
+  if (authLoading || isSubmitting) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="p-8 text-center">
@@ -156,14 +138,6 @@ const InternshipLoginForm = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
-      {isSubmitting && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg">
-            <p className="text-lg font-semibold">Submitting...</p>
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700 mt-4"></div>
-          </div>
-        </div>
-      )}
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 space-y-6 transform transition-all hover:scale-[1.01]">
         {submitStatus === "success" && (
           <div className="bg-green-100 border border-green-200 rounded-lg p-4 mb-6">
@@ -173,9 +147,8 @@ const InternshipLoginForm = () => {
             </div>
           </div>
         )}
-        {/* Logo/Brand Area */}
+
         <div className="flex justify-center mb-4">
-          {/* <div className="flex justify-center mb-6"> */}
           <div className="h-16 w-40 flex items-center justify-center">
             <img
               src="/images/logo.png"
@@ -183,41 +156,28 @@ const InternshipLoginForm = () => {
               className="max-h-full max-w-full object-contain hover:scale-105 transition-transform duration-300"
             />
           </div>
-          {/* </div> */}
         </div>
 
-        {/* Header */}
         <div className="space-y-2 text-center">
-          {/* <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-            Internship Portal
-          </h1> */}
           <p className="text-gray-600">
             Welcome to your internship management system
-            {/* <span className="text-blue-600 block mt-1">
-              Connect. Learn. Grow.
-            </span> */}
           </p>
         </div>
 
-        {/* User Type Selector */}
         <div className="bg-gray-100 rounded-xl">
           <div className="flex border-2 border-gray-200 rounded-xl overflow-hidden">
             <button
               type="button"
               onClick={() => setSelectedTab("student")}
-              className={`
-        flex-1 px-4 py-3 flex items-center justify-center space-x-2 transition-all duration-300
-        ${
-          selectedTab === "student"
-            ? "bg-blue-600 text-white"
-            : "bg-white text-gray-500 hover:bg-gray-50"
-        }
-        ${
-          selectedTab === "student"
-            ? "border-r border-blue-500"
-            : "border-r border-gray-200"
-        }
-      `}
+              className={`flex-1 px-4 py-3 flex items-center justify-center space-x-2 transition-all duration-300 ${
+                selectedTab === "student"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-500 hover:bg-gray-50"
+              } ${
+                selectedTab === "student"
+                  ? "border-r border-blue-500"
+                  : "border-r border-gray-200"
+              }`}
             >
               <GraduationCap className="h-5 w-5" />
               <span className="font-medium">Student</span>
@@ -225,19 +185,15 @@ const InternshipLoginForm = () => {
             <button
               type="button"
               onClick={() => setSelectedTab("guide")}
-              className={`
-        flex-1 px-4 py-3 flex items-center justify-center space-x-2 transition-all duration-300
-        ${
-          selectedTab === "guide"
-            ? "bg-blue-600 text-white"
-            : "bg-white text-gray-500 hover:bg-gray-50"
-        }
-        ${
-          selectedTab === "guide"
-            ? "border-r border-blue-500"
-            : "border-r border-gray-200"
-        }
-      `}
+              className={`flex-1 px-4 py-3 flex items-center justify-center space-x-2 transition-all duration-300 ${
+                selectedTab === "guide"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-500 hover:bg-gray-50"
+              } ${
+                selectedTab === "guide"
+                  ? "border-r border-blue-500"
+                  : "border-r border-gray-200"
+              }`}
             >
               <Users className="h-5 w-5" />
               <span className="font-medium">Guide</span>
@@ -245,14 +201,11 @@ const InternshipLoginForm = () => {
             <button
               type="button"
               onClick={() => setSelectedTab("admin")}
-              className={`
-        flex-1 px-4 py-3 flex items-center justify-center space-x-2 transition-all duration-300
-        ${
-          selectedTab === "admin"
-            ? "bg-blue-600 text-white"
-            : "bg-white text-gray-500 hover:bg-gray-50"
-        }
-      `}
+              className={`flex-1 px-4 py-3 flex items-center justify-center space-x-2 transition-all duration-300 ${
+                selectedTab === "admin"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-500 hover:bg-gray-50"
+              }`}
             >
               <UserCog className="h-5 w-5" />
               <span className="font-medium">Admin</span>
@@ -260,7 +213,6 @@ const InternshipLoginForm = () => {
           </div>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
@@ -279,7 +231,6 @@ const InternshipLoginForm = () => {
             />
           </div>
 
-          {/* Semester Field (Only for Students) */}
           {selectedTab === "student" && (
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
@@ -367,7 +318,6 @@ const InternshipLoginForm = () => {
           </div>
         )}
 
-        {/* Footer */}
         <div className="space-y-4">
           <div className="text-xs text-center text-gray-500">
             {getUserMessage()}

@@ -1,8 +1,11 @@
 import axios from 'axios';
 
-const axiosInstance = axios.create({
-  baseURL: process.env.REACT_APP_BACKEND_BASE_URL, // 👈 backend URL from .env
-  withCredentials: true, // send cookies with requests
+const instance = axios.create({
+  baseURL: process.env.REACT_APP_BACKEND_BASEURL,
+  withCredentials: true, 
+  headers: {
+    'Content-Type': 'application/json',
+  }
 });
 
-export default axiosInstance;
+export default instance;

@@ -46,14 +46,13 @@ app.use((req, res, next) => {
   next();
 });
 
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 
 
 app.use(cookieParser()); //  Parse cookies
 
 app.use((req, res, next) => {
-  console.log('Incoming cookies:', req.cookies);
-  console.log('Request origin:', req.headers.origin);
+  res.header('Access-Control-Allow-Credentials', 'true');
   next();
 });
 
